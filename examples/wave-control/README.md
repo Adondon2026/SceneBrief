@@ -32,3 +32,7 @@
 ## V2 Motion Lab 02
 
 [26 秒文献—图表—物理场景实验](research-motion-lab-v2.html)；[开工审查、分镜及验证记录](MOTION-LAB-02.md)。完整90秒 V1 暂不修改。
+
+## Motion Lab 03
+
+[25 秒信息主体与节拍实验](research-motion-lab-v3.html)；[回顾与验证记录](MOTION-LAB-03.md)。保留 V1、V2。
