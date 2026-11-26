@@ -37,11 +37,14 @@ function interpolateRoute(route,u){
     const dq=(k,j)=>dh00*a[k]+dh10*length*m0[j]+dh01*b[k]+dh11*length*m1[j];
     return {x:q('x',0),z:q('z',1),yaw:Math.atan2(dq('x',0),dq('z',1))}}acc+=lengths[i]}
 }
+export function dispatchTiming(k){return {start:k===3?33.0:35.9+k*.16,end:k===3?37.5:40.6+k*.25}}
+export function sampledDispatchRoute(k){return Array.from({length:65},(_,i)=>interpolateRoute(dispatchRoute(k),i/64))}
+export function sampledShipRoute(){return Array.from({length:65},(_,i)=>interpolateRoute(shipRoute,i/64))}
 export function dispatchTugAt(time,k){
   const route=dispatchRoute(k),goal=route[route.length-1];
-  const start=k===3?33.0:35.9+k*.16,end=k===3?37.5:40.6+k*.25;
-  if(time>=end)return {...goal,mode:'WAIT'};
-  return {...interpolateRoute(route,ease((time-start)/(end-start))),mode:time<start?'WAIT':'TRANSIT'};
+  const {start,end}=dispatchTiming(k);
+  if(time>=end)return {...goal,mode:'AT_STATION'};
+  return {...interpolateRoute(route,ease((time-start)/(end-start))),mode:time<start?'READY':'TRANSIT'};
 }
 export function dispatchShipAt(time){
   if(time<36.8)return {...ANCHOR};
