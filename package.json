@@ -8,7 +8,8 @@
     "build": "vite build --base=./",
     "preview": "vite preview --host 127.0.0.1",
     "test": "node --test",
-    "standalone": "node scripts/standalone.mjs"
+    "standalone": "node scripts/standalone.mjs",
+    "motion-lab": "node scripts/motion-lab-standalone.mjs"
   },
   "dependencies": {
     "three": "0.160.1"
