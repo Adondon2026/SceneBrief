@@ -15,6 +15,6 @@
 
 ## 开发状态
 
-项目处于原型阶段。V5 单文件原型计划保留为回归基线，后续迁移为模块化 Three.js 项目。当前运动为预设动画，非经验证的水动力仿真。
+项目处于原型阶段。[V5 单文件原型](examples/harbor-approach/legacy/v5.html) 已保留为回归基线（下载后用浏览器打开），后续迁移为模块化 Three.js 项目。当前运动为预设动画，非经验证的水动力仿真。
 
 设计规范见 [DESIGN.md](DESIGN.md)，开发路线见 [ROADMAP.md](ROADMAP.md)。
