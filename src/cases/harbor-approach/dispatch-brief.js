@@ -78,7 +78,7 @@ function request(g,t){
     drect(g,42,105,742,405,'#0d201ae8','#82977a88');drect(g,42,105,3,70,C.hi);
     dtext(g,'INBOUND SERVICE REQUEST / SB-017',62,133,13,C.hi,true);dtext(g,'进港靠泊申请',62,177,35,C.white,true);
     dline(g,[62,195],[764,195],C.grid);
-    const fields=[['主船','MV MERIDIAN / 集装箱船'],['总长 × 船宽','240 × 36 m'],['目标泊位','03 / 左舷靠泊'],['当前状态','外锚地 A-01 / 待命']];
+    const fields=[['主船','MV MERIDIAN / 集装箱船'],['总长 × 船宽 / 吃水','240 × 36 m / 12 m'],['目标泊位','03 / 左舷靠泊'],['当前状态','外锚地 A-01 / 待命']];
     fields.forEach(([k,v],i)=>{let y=225+i*55;dtext(g,k,64,y,13,C.mut);dtext(g,v,220,y+2,20,C.white,true);dline(g,[64,y+15],[489,y+15],C.grid)});
     g.save();g.beginPath();g.rect(504,205,260,253);g.clip();model(g,modelShip,634,355,.92,.95,.58);g.restore();
     dtext(g,'SHIP / PARTICULARS · CONCEPT',516,476,10,C.dim);
@@ -90,7 +90,7 @@ function request(g,t){
     dtext(g,'PORT DISPATCH / SB-017',847,133,13,C.hi,true);dtext(g,'调度作业结果',847,171,26,C.white,true);
     dtext(g,'04',846,270,94,C.hi,true);dtext(g,'艘港作拖轮',984,256,25,C.white,true);dtext(g,'2 艘推靠 + 2 艘伴航 / 待命',849,308,20,C.white,true);
     dline(g,[847,332],[1218,332],C.grid);dtext(g,'配置依据',847,360,13,C.mut);
-    dtext(g,'船舶尺度 · 泊位布局 · 环境与操纵条件',847,387,16,C.white);
+    dtext(g,'船舶尺度 · 泊位进路 · 操纵条件',847,387,16,C.white);dtext(g,'假设侧风 9 m/s · 流速 0.5 kn',847,407,13,C.mut);
     dtext(g,'本案为示意调度结果，非实际港口配拖标准',847,428,12,C.warm);
     dtext(g,'状态 / 四船确认后出发',847,477,14,C.hi,true);
   });
@@ -135,7 +135,7 @@ function tugCard(g,t,k,p,active){
   });
 }
 function dispatchChart(g,t){
-  const p=chartBase(g,.48,640,304,100,-95),q=p(ANCHOR);
+  const p=chartBase(g,.36,640,298,100,-170),q=p(ANCHOR);
   dcircle(g,...q,20,C.warm+'88');chartVessel(g,p,ANCHOR,240,36,C.warm,'A-01 / MV MERIDIAN');
   for(let k=0;k<FLEET.length;k++){
     const o=dispatchTugAt(t,k);chartVessel(g,p,o,31,10,C.hi,t<24+k*2?FLEET[k].id:'');
@@ -149,7 +149,7 @@ function dispatchChart(g,t){
   frameFoot(g,t,'四艘拖轮分配与定位','从两个拖轮基地调集，艏艉推靠与外侧待命角色分别确认。','FLEET / RESOURCE ALLOCATION');
 }
 function rendezvous(g,t){
-  const u=ease((t-36)/1.3),p=chartBase(g,mix(.48,.78,u),640,304,mix(100,115,u),mix(-95,-175,u));
+  const u=ease((t-38.8)/3.2),p=chartBase(g,mix(.36,.60,u),640,298,mix(100,115,u),mix(-170,-125,u));
   const ship=dispatchShipAt(t);dpath(g,shipDispatchRoute().map(p),C.warm,2,true);chartVessel(g,p,ship,240,36,C.warm,'MERIDIAN');
   for(let k=0;k<4;k++){
     let o=dispatchTugAt(t,k),r=dispatchRoute(k);
