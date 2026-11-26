@@ -1,5 +1,5 @@
 import {drawAnchoredStudy} from '../../overlays/anchored-study.js';
-import {cl,ease} from '../../core/math.js';
+import {cl,ease,mix} from '../../core/math.js';
 function line2(g,a,b,col='#b9c8a8',w=1){g.beginPath();g.moveTo(...a);g.lineTo(...b);g.strokeStyle=col;g.lineWidth=w;g.stroke()}
 function txt2(g,text,x,y,size=12,col='#a9b9a2',bold=false){g.fillStyle=col;g.font=(bold?'600 ':'')+size+'px Microsoft YaHei, Arial,sans-serif';g.fillText(text,x,y)}
 function arrow2(g,a,b,col,w=2){line2(g,a,b,col,w);let th=Math.atan2(b[1]-a[1],b[0]-a[0]);for(let k of [-1,1])line2(g,b,[b[0]-9*Math.cos(th+k*.45),b[1]-9*Math.sin(th+k*.45)],col,w)}
@@ -10,13 +10,14 @@ function vessel2(g,x,y,w,l,yaw=0){
 function forcePaint(g,{w,progress}){
   const y=167,shipX=128,hi='#c6db96',warm='#dfb584';
   txt2(g,'横向合力与艏摇力矩',14,76,14,'#e1e7d6',true);
-  vessel2(g,shipX,y,35,159,-.055);
+  vessel2(g,shipX,y,35,159,mix(-.10,-.015,ease(progress)));
+  const grow=ease((progress-.12)/.22),sum=ease((progress-.27)/.24);
   const positions=[y-48,y+48];for(let k=0;k<2;k++){
     const yy=positions[k];g.save();g.translate(239,yy);g.rotate(-Math.PI/2);g.fillStyle='#75937a';g.fillRect(-7,-16,14,32);g.restore();
-    arrow2(g,[219,yy],[151,yy],warm,k===1?3.7:2.3);txt2(g,k===1?'F₂ 增推':'F₁',222,yy-14,12,warm,true);
+    if(grow>.02)arrow2(g,[219,yy],[mix(219,151,grow),yy],warm,k===1?3.7:2.3);txt2(g,k===1?'F₂ 增推':'F₁',222,yy-14,12,warm,true);
   }
-  arrow2(g,[110,y],[55,y],hi,2.5);txt2(g,'ΣF',32,y-11,14,hi,true);
-  g.strokeStyle=warm;g.lineWidth=1.6;g.beginPath();g.arc(shipX,y,58,1.9,4.4);g.stroke();const a=4.4,b=[shipX+58*Math.cos(a),y+58*Math.sin(a)];arrow2(g,[b[0]-10,b[1]+4],b,warm,1.7);txt2(g,'M',55,113,13,warm,true);
+  if(sum>.02)arrow2(g,[110,y],[mix(110,55,sum),y],hi,2.5);txt2(g,'ΣF',32,y-11,14,hi,true);
+  g.strokeStyle=warm;g.lineWidth=1.6;g.beginPath();g.arc(shipX,y,58,1.9,mix(1.9,4.4,sum));g.stroke();const a=mix(1.9,4.4,sum),b=[shipX+58*Math.cos(a),y+58*Math.sin(a)];arrow2(g,[b[0]-10,b[1]+4],b,warm,1.7);txt2(g,'M',55,113,13,warm,true);
   line2(g,[14,261],[w-14,261],'#91a58b55');txt2(g,'F横 ≈ F₁ + F₂',14,289,20,'#e1e7d6',true);txt2(g,'推力差产生艏摇力矩，修正船艏向。',14,316,13,hi);
   txt2(g,'对称力臂下：|M| ≈ |F₂ − F₁| · l',14,344,13,'#d5ddca');txt2(g,'示意力矢量 / 非水动力计算结果',14,370,10,'#a9b9a2');
 }
@@ -38,4 +39,26 @@ export function drawForceStudy(ctx,time,anchor){
 }
 export function drawRangeStudy(ctx,time,anchor,m){
  return drawAnchoredStudy(ctx,{start:70.6,end:75.85,time,anchor,title:'艏艉岸距',index:'MEASUREMENT / 03',paint:(g,opt)=>rangePaint(g,{...opt,m})});
+}
+
+function mooringPaint(g,{w,opTime}){
+ const hi='#c6db96',warm='#dfb584';
+ txt2(g,'系泊缆绳 / 俯视示意',14,76,14,'#e1e7d6',true);
+ g.fillStyle='#6d806c';g.fillRect(32,90,26,168);
+ vessel2(g,166,172,38,154,0);
+ const ends=[[[147,108],[55,94]],[[147,237],[55,254]],[[147,113],[55,169]],[[147,230],[55,184]]];
+ let count=0;
+ for(let k=0;k<4;k++){
+  const [a,b]=ends[k],u=ease(cl((opTime-26-k*.55)/1.1));
+  g.fillStyle='#b7c6a8';g.fillRect(b[0]-3,b[1]-3,6,6);
+  if(u>0)line2(g,a,[mix(a[0],b[0],u),mix(a[1],b[1],u)],k<2?hi:warm,1.8);
+  if(u>.99)count++;
+ }
+ txt2(g,'艏 / 艉缆',197,111,12,hi);txt2(g,'倒缆',197,183,12,warm);
+ line2(g,[14,268],[w-14,268],'#91a58b55');txt2(g,count+' / 4',14,301,25,'#e1e7d6',true);
+ txt2(g,'示意缆绳带妥',105,298,13,hi);txt2(g,'艏艉缆与倒缆约束纵、横向运动。',14,333,13,'#d5ddca');
+ txt2(g,'示意布置 / 非实际系泊方案',14,370,10,'#a9b9a2');
+}
+export function drawMooringStudy(ctx,time,anchor,opTime){
+ return drawAnchoredStudy(ctx,{start:83.0,end:87.05,time,anchor,title:'系泊布置',index:'MOORING / 04',paint:(g,opt)=>mooringPaint(g,{...opt,opTime})});
 }
