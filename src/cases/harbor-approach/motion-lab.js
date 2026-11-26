@@ -1,4 +1,4 @@
-import {cl,mix,ease,rnd} from '../../core/math.js';
+import {cl,mix,ease,rnd,local} from '../../core/math.js';
 import {phase,smoothstep,blendRect,partialPath,continuousKeys} from '../../core/motion-design.js';
 import {shapes,vesselShapes} from './geometry.js';
 import {FLEET,ANCHOR,dispatchTugAt,sampledDispatchRoute} from './dispatch-state.js';
@@ -62,7 +62,7 @@ function circle(g,p,r,col,fill=false){g.beginPath();g.arc(...p,r,0,TAU);if(fill)
 function alpha(g,a,f){if(a<=.001)return;g.save();g.globalAlpha*=cl(a);f();g.restore()}
 function corners(g,p,r,c=C.hi){const [x,y]=p;for(const a of [-1,1])for(const b of [-1,1]){line(g,[x+a*r,y+b*r],[x+a*(r-8),y+b*r],c,1.5);line(g,[x+a*r,y+b*r],[x+a*r,y+b*(r-8)],c,1.5)}}
 function facesFor(tug){shapes.length=0;vesselShapes({x:0,z:0,yaw:0},tug,true);const result=shapes.map(f=>({...f,ps:f.ps.map(p=>p.slice())}));shapes.length=0;return result}
-const tugFaces=facesFor(true),routes=FLEET.map((_,k)=>sampledDispatchRoute(k));
+const tugFaces=facesFor(true),shipFaces=facesFor(false),routes=FLEET.map((_,k)=>sampledDispatchRoute(k));
 function renderModel(g,x,y,scale,az,el,reveal){
  const ca=Math.cos(az),sa=Math.sin(az),se=Math.sin(el),ce=Math.cos(el);
  const p=([a,b,c])=>[x+(a*ca-c*sa)*scale,y+((a*sa+c*ca)*se-b*ce)*scale];
@@ -81,7 +81,14 @@ function shipSymbol(g,p,o,L,B,fill,edge){
  if(L>100){for(let k=-4;k<=4;k++){let z=k*L*.08;poly(g,[[-B*.35,z-5],[B*.35,z-5],[B*.35,z+5],[-B*.35,z+5]].map(([x,z])=>local(x,z)),'#788877',null)}}
  else poly(g,[[-B*.28,-3],[B*.28,-3],[B*.28,7],[-B*.28,7]].map(([x,z])=>local(x,z)),'#c0cbb3',null);
 }
-function drawMap(g,t,camera,active){
+function worldVessel(g,p,o,faces,camera){
+ const ca=Math.cos(camera.az),sa=Math.sin(camera.az);
+ const fs=faces.map(f=>({...f,ps:f.ps.map(v=>local(o,...v))}));
+ const depth=f=>f.ps.reduce((n,[x,y,z])=>n+(x*sa+z*ca)*camera.tilt-y*(1-camera.tilt*.48),0)/f.ps.length;
+ for(const f of fs.sort((a,b)=>(a.layer||0)-(b.layer||0)||depth(b)-depth(a)))poly(g,f.ps.map(v=>p(...v)),f.fill,f.edge);
+}
+export function drawLabWorld(g,t,camera,active,options={}){
+ const {ship=ANCHOR,positions=FLEET.map((_,k)=>dispatchTugAt(24,k)),detail=0,routeTime=t,showRoutes=true,shipTag=true}=options;
  const p=(x,y,z)=>labProject(camera,x,y,z);
  const bg=g.createLinearGradient(0,0,1280,720);bg.addColorStop(0,'#172d26');bg.addColorStop(.55,'#102720');bg.addColorStop(1,'#081511');rect(g,0,0,1280,720,bg);
  // The same world geometry persists throughout the sequence. Surface marks move with camera.
@@ -98,10 +105,12 @@ function drawMap(g,t,camera,active){
  const berth=p(-83,4,115);mono(g,'B03',berth[0]-8,berth[1]-8,12,C.hi,'right');
  const qNorth=p(-45,0,470),qSouth=p(-45,0,-300);text(g,'北拖轮基地',qNorth[0],qNorth[1],13,C.mut,false,'right');text(g,'南拖轮基地',qSouth[0],qSouth[1],13,C.mut,false,'right');
  for(const [i,o] of [{x:35,z:-500},{x:185,z:-480},{x:35,z:-280},{x:210,z:-280},{x:240,z:30},{x:265,z:180}].entries())circle(g,p(o.x,0,o.z),2.5,i%2?C.warm:C.hi,true);
- const ship=ANCHOR;shipSymbol(g,p,ship,240,36,'#b5a77e','#d8c79d');const ap=p(ship.x,0,ship.z);circle(g,ap,19,C.warm+'88');text(g,'A-01 / MERIDIAN',ap[0]+22,ap[1]-8,12,C.warm,true);
- const positions=FLEET.map((_,k)=>dispatchTugAt(24,k)); // ships remain at bases during assignment
+ const ap=p(ship.x,0,ship.z);
+ if(detail>0.02)alpha(g,detail,()=>worldVessel(g,p,ship,shipFaces,camera));
+ if(detail<.99)alpha(g,1-detail,()=>shipSymbol(g,p,ship,240,36,'#b5a77e','#d8c79d'));
+ if(shipTag){circle(g,ap,19,C.warm+'88');text(g,'MERIDIAN',ap[0]+22,ap[1]-8,12,C.warm,true)}
  for(let k=0;k<4;k++){
-  const o=positions[k],q=p(o.x,0,o.z),a=phase(t,LAB_STARTS[k]+.6,.95);
+  const o=positions[k],q=p(o.x,0,o.z),a=showRoutes?phase(routeTime,LAB_STARTS[k]+.6,.95):0;
   alpha(g,a*.82,()=>path(g,partialPath(routes[k].map(o=>p(o.x,0,o.z)),a),k===active?C.hi:'#a6bf9290',k===active?1.6:1,true));
   shipSymbol(g,p,o,31,10,k===active?C.hi:'#9ab395','#d3dfbd');
   const label=active===k?'':FLEET[k].id;if(label)mono(g,label,q[0]+10,q[1]-7,11,k===active?C.hi:C.mut);
@@ -143,16 +152,27 @@ function drawConnection(g,t,k,st,active){
  alpha(g,mix(.94,.22,st.dock),()=>path(g,p,k===active?C.hi:C.mut,k===active?1.5:1));
  if(st.lock>0){alpha(g,mix(.95,.60,st.dock)*st.lock,()=>{corners(g,a,mix(29,13,st.lock),k===active?C.hi:C.mut);circle(g,a,3,k===active?C.hi:C.mut,true)})}
 }
-export function drawMotionLab(g,t,W,H){
- t=cl(t,0,LAB_DURATION);g.save();g.scale(W/1280,H/720);g.globalAlpha=1;
- const cam=labCamera(t),active=labActive(t),anchors=drawMap(g,t,cam,active);
- const states=anchors.map((a,k)=>labCardState(t,k,a));
+export function drawLabDossiers(g,t,anchors,{archive=0}={}){
+ const active=labActive(t),states=anchors.map((a,k)=>labCardState(t,k,a));
+ // Once dispatch is confirmed, the same cards collapse into a narrow live resource strip.
+ if(archive>0)for(let k=0;k<states.length;k++){const st=states[k];st.rect=blendRect(st.rect,[42+k*302,578,286,86],archive)}
+
  // Focus creates a soft depth gradient; the map remains live and visible behind the panel.
  const emphasis=states.reduce((m,s)=>Math.max(m,s.focus),0),shade=g.createLinearGradient(660,0,1280,0);shade.addColorStop(0,'rgba(4,12,9,0)');shade.addColorStop(1,'rgba(4,12,9,'+(.53*emphasis)+')');rect(g,660,78,620,423,shade);
  for(let k=0;k<4;k++)drawConnection(g,t,k,states[k],active);
  // Previous dossiers move into a persistent index; current dossier owns foreground.
- for(let k=0;k<4;k++)if(k!==active)modelCard(g,t,k,states[k]);
+ for(let k=0;k<4;k++)if(k!==active){
+   alpha(g,1-archive,()=>modelCard(g,t,k,states[k]));
+   if(archive>0){const [x,y,w,h]=states[k].rect;alpha(g,archive,()=>{rect(g,x,y,w,h,'#0a1915ec','#78937a');mono(g,FLEET[k].id+' / '+FLEET[k].bp+' t',x+12,y+21,12,C.hi);text(g,roles[k],x+12,y+44,17,C.white,true)})}
+ }
  if(active>=0)modelCard(g,t,active,states[active]);
+ return states;
+}
+export function drawMotionLab(g,t,W,H,{chrome=true,subtitle=true}={}){
+ t=cl(t,0,LAB_DURATION);g.save();g.scale(W/1280,H/720);g.globalAlpha=1;
+ const cam=labCamera(t),active=labActive(t),anchors=drawLabWorld(g,t,cam,active);
+ drawLabDossiers(g,t,anchors);
+ if(!chrome){g.restore();return}
  const top=g.createLinearGradient(0,0,0,108);top.addColorStop(0,'#06110eea');top.addColorStop(1,'#06110e00');rect(g,0,0,1280,108,top);
  mono(g,'SCENEBRIEF / PORT DISPATCH',42,36,13,C.hi);mono(g,'OP.017  /  BERTH 03  /  MV MERIDIAN',42,56,11,C.mut);text(g,'演示工况 / 非实测数据',1238,36,12,C.mut,false,'right');line(g,[42,70],[1238,70],'#a7bd9650');
  const assigned=FLEET.filter((_,k)=>t>=LAB_STARTS[k]+.8).length;
@@ -161,7 +181,7 @@ export function drawMotionLab(g,t,W,H){
  if(t>=LAB_FINAL){const a=phase(t,LAB_FINAL,.9);alpha(g,a,()=>{text(g,'四船确认 / 等待出发',44,118,27,C.white,true);text(g,'2 艘推靠 + 2 艘伴航与待命',46,143,14,C.mut);mono(g,'DISPATCH COMPLETE',46,164,11,C.hi)})}
  const bottom=g.createLinearGradient(0,662,0,720);bottom.addColorStop(0,'#08151100');bottom.addColorStop(1,'#081511ef');rect(g,0,662,1280,58,bottom);
  const voice=LAB_VOICE.find(v=>t>=v.at&&t<v.end);
- if(voice){rect(g,42,681,3,19,C.hi);text(g,voice.text,54,696,15,C.white,true)}
+ if(voice&&subtitle){rect(g,42,681,3,19,C.hi);text(g,voice.text,54,696,15,C.white,true)}
  mono(g,'MOTION LAB / '+(active>=0?FLEET[active].id:t>=LAB_FINAL?'COMPLETE':'OVERVIEW'),1238,697,11,C.mut,'right');
  rect(g,0,714,1280,2,'#9ab28c26');rect(g,0,714,1280*t/LAB_DURATION,2,C.hi);
  g.restore();

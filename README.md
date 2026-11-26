@@ -46,3 +46,7 @@ V7 新增地球定位、锚泊状态、进港服务需求、四艘拖轮资源�
 ## V8 Motion Lab / 连续动态构图实验
 
 [打开单文件预览的 GitHub 文件页](examples/harbor-approach/motion-lab-v8.html)，下载原始 HTML 后浏览器打开。18.5 秒，独立于 V7 的 90 秒完整版。开发模式运行 `npm run dev` 后访问 `/motion-lab.html`；导出运行 `npm run motion-lab`。旁白依赖设备上已安装的本地中文语音，未检测到时保留字幕，音效独立开关。
+
+## V9：完整连续动态简报
+
+[完整 90 秒 HTML 预览](examples/harbor-approach/v9.html)（下载原始文件后直接打开）；[旁白时间轨 SRT](examples/harbor-approach/v9-narration.srt)。V9 完整版不调用浏览器或微软 TTS，仅保留字幕与原有事件音效。后续可按 SRT 制作外部语音素材。运行 `npm run standalone` 可重建 HTML 和 SRT。V7 与 V8 实验文件继续保留为对照。
