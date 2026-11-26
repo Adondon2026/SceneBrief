@@ -1,0 +1,591 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>OPERATION / BERTH 03 · V7</title><style>*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;background:#080b09;overflow:hidden;color:#dce2d0;font-family:Arial,'Microsoft YaHei',sans-serif}body{display:grid;place-items:center}#stage{width:min(100vw,177.7778vh);height:min(100vh,56.25vw);position:relative;overflow:hidden;isolation:isolate;background:#111a16}canvas,#gl{position:absolute;inset:0;width:100%;height:100%;display:block}#gl{z-index:1}#ui{z-index:2;pointer-events:none}#grain{position:absolute;inset:0;pointer-events:none;z-index:3;background:radial-gradient(ellipse at 50% 45%,transparent 35%,#0008 100%),repeating-linear-gradient(0deg,transparent 0 3px,#0001 3px 4px);mix-blend-mode:multiply}#start{position:absolute;z-index:5;inset:0;display:grid;place-content:center;text-align:center;background:#09100cbf;backdrop-filter:blur(5px)}#start small{font:12px Consolas;letter-spacing:.22em;color:#a9bb99}#start h1{font-weight:500;letter-spacing:.16em;font-size:clamp(23px,4vw,52px);margin:18px 0 6px}#start p{font-size:13px;color:#b2bca9;margin:0 0 28px}button{font:inherit;color:#dce2d0;border:1px solid #a4b1946b;background:#111b16d9;padding:8px 15px;cursor:pointer}button:hover{background:#344334}#start button{justify-self:center;padding:12px 24px;font-size:14px;letter-spacing:.08em}#controls{z-index:6;position:absolute;left:3%;right:3%;bottom:3%;display:flex;align-items:center;gap:9px;opacity:0;transition:opacity .2s;padding:9px;background:#0a100edb;border:1px solid #a4b19438}#stage:hover #controls.show,#controls:focus-within{opacity:1}#controls input{flex:1;accent-color:#b7cc93;min-width:50px}#time{font:12px Consolas;white-space:nowrap}#mode{position:absolute;top:1%;right:2%;font:10px Consolas;color:#c3ceaf7d;z-index:4;pointer-events:none}#stage:fullscreen{width:100%;height:100%} @media(max-width:600px){#controls{gap:3px}#controls button{padding:6px;font-size:11px}}
+</style></head><body><main id="stage"><canvas id="base"></canvas><div id="gl"></div><canvas id="ui"></canvas><div id="grain"></div><span id="mode">SIM / SOFTWARE 3D</span><div id="start"><small>MARITIME INTELLIGENCE / OP. 017</small><h1>靠泊行动</h1><p>锚地 · 港口调度 · 四拖轮协同 / 90 秒 · V7</p><button id="go">▶ 播放简报（含音效）</button></div><div id="controls"><button id="play">Ⅱ</button><button id="restart">↺</button><input id="seek" type="range" min="0" max="90" value="0" step="0.01"><span id="time">00:00 / 01:30</span><button id="mute">音效 开</button><input id="volume" aria-label="音量" type="range" min="0" max="1" step="0.01" value="0.55" style="flex:0 1 75px"><button id="full">全屏</button></div></main><script type="module">const D=30;
+const cl=(v,a=0,z=1)=>Math.max(a,Math.min(z,v));
+const mix=(a,b,p)=>a+(b-a)*p;
+const ease=p=>{p=cl(p);return p*p*(3-2*p)};
+const rnd=i=>{let q=Math.sin(i*127.1+311.7)*43758.5453;return q-Math.floor(q)};
+function local(o,x,y,z){let a=o.yaw||0;return [o.x+x*Math.cos(a)+z*Math.sin(a),y,(o.z+z*Math.cos(a)-x*Math.sin(a))]}
+
+// All distances, numbers and equipment are fictional concept data. Coordinates are meters.
+// Illustrative harbor operation, time compressed 42:1. Coordinates in metres.
+const SIM=42, P=[[0,95,-330,-.09],[4,78,-95,-.08],[8,40,88,-.055],[10,32,115,-.045],[12,32,115,-.045],[17,-8,115,-.018],[22,-44,115,0],[26,-50.2,115,0],[30,-50.2,115,0]];
+function curve(time,k,arr=P){let n=arr.length,i=0;while(i<n-2&&time>arr[i+1][0])i++;let h=arr[i+1][0]-arr[i][0],u=cl((time-arr[i][0])/h),a=arr[i][k],b=arr[i+1][k];function slope(j){if(j===0)return (arr[1][k]-arr[0][k])/(arr[1][0]-arr[0][0]);if(j===n-1)return 0;let m=(arr[j][k]-arr[j-1][k])/(arr[j][0]-arr[j-1][0]),q=(arr[j+1][k]-arr[j][k])/(arr[j+1][0]-arr[j][0]);return m*q>0?2*m*q/(m+q):0}return (2*u*u*u-3*u*u+1)*a+(u*u*u-2*u*u+u)*h*slope(i)+(-2*u*u*u+3*u*u)*b+(u*u*u-u*u)*h*slope(i+1)}
+function pathAt(time){return {x:curve(time,1),z:curve(time,2),yaw:curve(time,3)}}
+// World-space approach, tangent-aligned heading, then longitudinal push and reverse retreat.
+const station=[64,-64], join=[11.6,12], leave=[28.1,28.5], contactX=33.65;
+const drift=[[],[]];
+for(let k=0;k<2;k++){let z=station[k]; for(let i=0;i<=1800;i++){let tt=12+i*.01;drift[k].push(z);let a=pathAt(tt),b=pathAt(Math.min(30,tt+.01));let along=(b.x-a.x)*Math.sin(a.yaw)+(b.z-a.z)*Math.cos(a.yaw);z+=contactX*(b.yaw-a.yaw)-along;}}
+function contactZ(time,k){let n=cl((time-12)*100,0,1799),i=Math.floor(n);return mix(drift[k][i],drift[k][i+1],n-i)}
+function tugAt(time,k){let end=join[k],start=6.2+k*.45,ref=pathAt(12),z=station[k],s=pathAt(time);
+ if(time<end){let u=ease(cl((time-start)/(end-start))),p0=[115,z+(k?-42:40)],p1=[88,z+(k?-36:34)],p2=[55,z],p3=[contactX,z],v=1-u;
+ let pos=[0,1].map(i=>v*v*v*p0[i]+3*v*v*u*p1[i]+3*v*u*u*p2[i]+u*u*u*p3[i]);let d=[0,1].map(i=>3*v*v*(p1[i]-p0[i])+6*v*u*(p2[i]-p1[i])+3*u*u*(p3[i]-p2[i]));let pt=local(ref,pos[0],0,pos[1]);return {x:pt[0],z:pt[2],yaw:ref.yaw+Math.atan2(d[0],d[1]),contact:false,mode:time<start?'WAIT':'APPROACH'};}
+ let out=ease(cl((time-leave[k])/(30-leave[k]))),pt=local(s,contactX+out*27,0,contactZ(time,k));return {x:pt[0],z:pt[2],yaw:s.yaw-Math.PI/2,contact:time<leave[k],mode:time<12?'HOLD':time<26?'PUSH':time<leave[k]?'HOLD':'REVERSE'};}
+function motion(time){let a=pathAt(Math.max(0,time-.025)),b=pathAt(Math.min(D,time+.025)),dt=(Math.min(D,time+.025)-Math.max(0,time-.025))*SIM||1;let s=pathAt(time),fx=(b.x-a.x)/dt,fz=(b.z-a.z)/dt;return {ahead:Math.max(0,(fx*Math.sin(s.yaw)+fz*Math.cos(s.yaw))*1.94384),sway:Math.abs(fx*Math.cos(s.yaw)-fz*Math.sin(s.yaw)),fore:local(s,-18,0,64)[0]+68.2,aft:local(s,-18,0,-64)[0]+68.2,heading:s.yaw*180/Math.PI}}
+
+// Mesh primitives shared by the orthographic software preview and Three.js geometry.
+const shapes=[];let shapeId=0;function prism(o,pts,y0,y1,color,side,edge){let id=++shapeId,layer=y0<=0?0:y0<5?1:2,top=pts.map(p=>local(o,p[0],y1,p[1])),bot=pts.map(p=>local(o,p[0],y0,p[1]));for(let i=0;i<pts.length;i++){let k=(i+1)%pts.length;shapes.push({ps:[bot[i],bot[k],top[k],top[i]],fill:side,edge,id,layer})}shapes.push({ps:top,fill:color,edge,id,layer})}function box(o,x,z,w,l,y0,y1,color,side='#4d5b50',edge='#1c2c27'){prism(o,[[x-w/2,z-l/2],[x+w/2,z-l/2],[x+w/2,z+l/2],[x-w/2,z+l/2]],y0,y1,color,side,edge)}
+function vesselShapes(o,isTug=false,wireframe=false){let L=isTug?31:240,B=isTug?10:36,ed=wireframe?'#a0bb8a':'#2b3a33',deck=wireframe?'#283c30':isTug?'#8b9c86':'#829080',hull=wireframe?'#1e342b':isTug?'#394c41':'#485c51';let pts=[[-B*.39,-L*.5],[B*.39,-L*.5],[B*.5,-L*.40],[B*.5,L*.29],[B*.39,L*.42],[0,L*.5],[-B*.39,L*.42],[-B*.5,L*.29],[-B*.5,-L*.4]];let h=isTug?3.1:10;prism(o,pts,0,h,deck,hull,ed);if(isTug){box(o,0,3,6.5,10,h,h+5.0,wireframe?'#293e32':'#b4b9a4','#65736b',ed);for(let x of [-2.25,0,2.25])box(o,x,8.05,1.85,.25,h+2.7,h+4.5,'#253b36','#172820',ed);for(let x of [-3.29,3.29])for(let z of [1,4.5])box(o,x,z,.18,2.8,h+2.7,h+4.5,'#263d38','#172820',ed);for(let x of [-3.6,3.6])for(let z=-9;z<=10;z+=3)box(o,x,z,.13,.13,h,h+1,'#a9b4a0','#536252',ed);box(o,0,3,7.4,10.8,h+5,h+5.6,'#aab19d','#67776b',ed);box(o,0,2,1,1,h+5.6,h+10,'#a2ae93','#586b59',ed);box(o,0,-9,5,4,h,h+2,'#546e58','#3a4e43',ed);for(let x of [-2.1,0,2.1])box(o,x,14.0,2.2,3.1,.6,3.5,'#29302c','#202925',ed);for(let x of [-4.6,4.6])for(let z of [-8,-4,0,4,8])box(o,x,z,.8,2,1,3.2,'#343b34','#232c27',ed);box(o,0,-10,3,3,h+2,h+3.2,'#a2aa91','#546655',ed);return}box(o,0,-93,30,25,h,h+15,wireframe?'#304336':'#bdc4b2','#788a7b',ed);box(o,0,-86,31,3,h+9,h+13,'#243b35','#293c36',ed);box(o,0,-91,32,27,h+15,h+16,'#c4cbb9','#829182',ed);box(o,0,-94,2,2,h+16,h+28,'#a8b89d','#67765f',ed);box(o,0,-94,15,2,h+24,h+25,'#b8c5a9','#7e9175',ed);box(o,9,-105,6,6,h+16,h+24,'#566a59','#374c43',ed);for(let iz=0;iz<8;iz++)for(let ix=0;ix<4;ix++){let z=-68+iz*20,x=-12+ix*8,k=1+(Math.floor(rnd(iz*7+ix)*3));let colors=['#7e8d78','#a0a88d','#596f64','#818b78','#9e9176'];for(let n=0;n<k;n++)box(o,x,z,7.2,18.7,h+n*4,h+(n+1)*4,wireframe?'#273b30':colors[(iz+ix+n)%colors.length],wireframe?'#203129':'#5b6857',ed)}box(o,0,102,7,9,h,h+2,'#a4b39a','#657663',ed);for(let x of [-14,14])for(let z of [-106,93,101])box(o,x,z,2,3,h,h+1.6,'#384a40','#25352d',ed);for(let x of [-17,17])for(let z=-75;z<91;z+=12)box(o,x,z,.7,.9,h,h+1.1,'#a4b09b','#516254',ed)}
+function portShapes(){let o={x:0,z:0,yaw:0};box(o,-210,105,280,630,-1,4,'#6e7965','#424f43','#8d9b80');box(o,-78,105,16,630,0,4.4,'#a0a88e','#576854','#a8b39a');for(let z=-175;z<=375;z+=28){box(o,-69,z,1.6,4,0,5,'#303c34','#29372f','#536451');box(o,-82,z,2,2,4,6,'#b9bb9a','#6d775d','#7e896e')}for(let i=0;i<5;i++){let z=-135+i*115;for(let x of [-124,-91])box(o,x,z,3,3,4,44,'#9aab8b','#536b55','#52694f');box(o,-108,z,47,4,41,45,'#a1b08e','#687b5f','#546952');if(z>=0&&z<=250){box(o,-91,z,4,3,44,86,'#a9b591','#718562','#506c55')}else{box(o,-78,z,65,3,43,46,'#a9b591','#718562','#506c55');box(o,-52,z,3,4,40,43,'#829779','#576d58','#4c6351')}}for(let z=-165;z<390;z+=25)for(let x=-280;x<-145;x+=17){if(rnd(z+x)>.28)box(o,x,z,15,20,4,7+rnd(z*x)*6,['#8a967a','#7a8b75','#9b9d82','#687c6a'][Math.floor(rnd(x+z)*4)],'#4c6252','#536450')}}
+
+// Camera keys: time, azimuth, elevation, scale, local focus x/y/z. Continuous framing, not a persistent wide shot.
+const CAM=[[0,-.08,1.35,.86,-20,0,135],[2,.10,1.15,1.45,-10,4,65],[4.8,.68,.53,3.0,0,10,-46],[6.8,1.0,.36,7.5,63,8,76],[8.4,.94,.34,12.0,82,8,85],[10.2,.73,.42,16.0,37,5,64],[11.7,.42,.65,10.5,29,6,64],[13.8,.08,1.35,2.4,4,0,4],[16.1,-.30,1.27,2.55,-1,1,0],[18.4,-.72,.64,8.2,-27,4,60],[20.3,-.76,.49,13.5,-29,3,64],[22.2,-.92,.34,18.5,-20.5,3,64],[24.6,-.70,.40,21,-19,3,64],[26.3,-.47,.62,13,-15,8,92],[28,-.21,1.06,6,-19,7,91],[30,.12,1.35,2.1,-4,0,0]];
+function harborCamera(time,s,W,H){let focus=local(s,curve(time,4,CAM),curve(time,5,CAM),curve(time,6,CAM));return {az:curve(time,1,CAM),el:curve(time,2,CAM),scale:curve(time,3,CAM)*W/1280,tx:focus[0],ty:focus[1],tz:focus[2],cx:W*.53,cy:H*.43}}
+
+
+// Coordinates are in a 1280 × 720 design space. The caller owns the main view.
+function studyVisibility(time,start,end){return ease(cl((time-start)/.32))*ease(cl((end-time)/.27))}
+function drawAnchoredStudy(ctx,{time,start,end,anchor,paint,title,index,side='right'}){
+  const a=studyVisibility(time,start,end);if(a<=0)return false;
+  const w=308,h=384,x=(side==='left'?42:930)+(1-a)*(side==='left'?-22:22),y=111;
+  const [ax,ay]=anchor,visible=ax>=24&&ax<=1256&&ay>=90&&ay<=548;
+  const edge=side==='left'?x+w:x,linkY=y+72,elbow=edge+(side==='left'?28:-28);
+  ctx.save();ctx.globalAlpha=a;
+  const shade=ctx.createLinearGradient(side==='left'?0:1280,0,side==='left'?700:580,0);
+  shade.addColorStop(0,'rgba(4,12,9,.48)');shade.addColorStop(1,'rgba(4,12,9,0)');
+  ctx.fillStyle=shade;ctx.fillRect(0,90,1280,454);
+  if(visible){
+    ctx.strokeStyle='#c2d3a4';ctx.lineWidth=1.2;
+    ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(elbow,linkY);ctx.lineTo(edge,linkY);ctx.stroke();
+    ctx.beginPath();ctx.arc(ax,ay,4,0,Math.PI*2);ctx.stroke();
+    for(const dx of [-1,1])for(const dy of [-1,1]){
+      ctx.beginPath();ctx.moveTo(ax+dx*15,ay+dy*15);ctx.lineTo(ax+dx*15,ay+dy*8);
+      ctx.moveTo(ax+dx*15,ay+dy*15);ctx.lineTo(ax+dx*8,ay+dy*15);ctx.stroke();
+    }
+  }
+  ctx.fillStyle='#0b1713f5';ctx.fillRect(x,y,w,h);
+  ctx.strokeStyle='#82977a';ctx.lineWidth=.9;ctx.strokeRect(x+.5,y+.5,w-1,h-1);
+  ctx.fillStyle='#c2d3a4';ctx.fillRect(x,y,3,43);
+  ctx.save();ctx.beginPath();ctx.rect(x+1,y+1,w-2,h-2);ctx.clip();
+  ctx.translate(x,y);ctx.textAlign='left';ctx.textBaseline='alphabetic';
+  ctx.fillStyle='#a6b89d';ctx.font='11px Consolas, monospace';ctx.fillText(index,13,19);
+  ctx.fillStyle='#e1e7d6';ctx.font='600 20px Microsoft YaHei, Arial, sans-serif';ctx.fillText(title,13,43);
+  ctx.strokeStyle='#91a58b45';ctx.beginPath();ctx.moveTo(13,54);ctx.lineTo(w-13,54);ctx.stroke();
+  paint(ctx,{w,h,progress:cl((time-start)/(end-start)),visibility:a});
+  ctx.restore();ctx.restore();return true;
+}
+
+
+const TUG_STUDY={start:8.25,end:11.72};
+const origin={x:0,z:0,yaw:0};
+function buildStudy(){
+  shapes.length=0;vesselShapes(origin,true,true);
+  const hull=[[-3.9,-15.5],[3.9,-15.5],[5,-12.4],[5,8.99],[3.9,13.02],[0,15.5],[-3.9,13.02],[-5,8.99],[-5,-12.4]];
+  prism(origin,hull,-2.4,0,'#38564b','#365046','#789985');
+  shapes.push({ps:hull.map(([x,z])=>[x,-2.4,z]),fill:'#38564b',edge:'#789985'});
+  for(const x of [-2.3,2.3]){
+    const ring=Array.from({length:16},(_,i)=>[x+1.05*Math.cos(i*Math.PI/8),-10.3+1.05*Math.sin(i*Math.PI/8)]);
+    prism(origin,ring,-4.5,-2.4,'#829c84','#536f5e','#c1d5ab');
+    const disc=Array.from({length:20},(_,i)=>[x+1.55*Math.cos(i*Math.PI/10),-4.1+1.55*Math.sin(i*Math.PI/10),-11.5]);
+    shapes.push({ps:disc,fill:'#b3c2a6',edge:'#d0e0b7'});
+    for(let i=0;i<4;i++){const a=i*Math.PI/2;shapes.push({ps:[[x,-4.1,-11.56],[x+1.35*Math.cos(a),-4.1+1.35*Math.sin(a),-11.56],[x+1.22*Math.cos(a+.55),-4.1+1.22*Math.sin(a+.55),-11.56]],fill:'#45594a',edge:'#647d65'})}
+    box(origin,x,-10.2,1.65,1.9,-4.5,-3.5,'#809e82','#526b58','#b0c69b');
+  }
+  const faces=shapes.map(f=>({...f,ps:f.ps.map(p=>p.slice())}));shapes.length=0;return faces;
+}
+const studyFaces=buildStudy();
+function tugText(g,s,x,y,size=12,color='#a9b9a2',bold=false){g.fillStyle=color;g.font=(bold?'600 ':'')+size+'px Microsoft YaHei, Arial, sans-serif';g.fillText(s,x,y)}
+function tugLine(g,a,b,col,w=1){g.strokeStyle=col;g.lineWidth=w;g.beginPath();g.moveTo(...a);g.lineTo(...b);g.stroke()}
+function paintTug(g,{w,progress}){
+  const q=ease(cl((progress-.08)/.7)),az=mix(.77,2.83,q),el=mix(.48,-.55,q),scale=6.8;
+  const sa=Math.sin(az),ca=Math.cos(az),se=Math.sin(el),ce=Math.cos(el);
+  const project=([x,y,z])=>[w/2+(x*ca-z*sa)*scale,164+((x*sa+z*ca)*se-(y-2)*ce)*scale];
+  const depth=f=>f.ps.reduce((sum,[x,y,z])=>sum+x*sa*ce+z*ca*ce+y*se,0)/f.ps.length;
+  g.save();g.beginPath();g.rect(12,59,w-24,202);g.clip();
+  for(let x=18;x<w-14;x+=24)tugLine(g,[x,59],[x,260],'#89a1841b');
+  for(let y=68;y<260;y+=24)tugLine(g,[14,y],[w-14,y],'#89a1841b');
+  for(const f of [...studyFaces].sort((a,b)=>depth(a)-depth(b))){
+    g.beginPath();f.ps.forEach((pt,i)=>{let [x,y]=project(pt);i?g.lineTo(x,y):g.moveTo(x,y)});g.closePath();g.fillStyle=f.fill;g.fill();g.strokeStyle=f.edge;g.lineWidth=.65;g.stroke();
+  }
+  if(q>.74){
+    g.globalAlpha*=cl((q-.74)/.26);
+    for(const [i,x] of [-2.3,2.3].entries()){
+      const a=project([x,-4.1,-11.7]),b=project([x+(i?1:-1)*4.6,-4.1,-14.2]);
+      tugLine(g,a,b,'#e1b77e',2);
+      const th=Math.atan2(b[1]-a[1],b[0]-a[0]);g.fillStyle='#e1b77e';g.beginPath();g.moveTo(...b);g.lineTo(b[0]-8*Math.cos(th-.4),b[1]-8*Math.sin(th-.4));g.lineTo(b[0]-8*Math.cos(th+.4),b[1]-8*Math.sin(th+.4));g.fill();
+      g.strokeStyle='#e1b77e';g.beginPath();g.arc(...a,5,0,Math.PI*2);g.stroke();
+    }
+  }
+  g.restore();
+  tugLine(g,[13,267],[w-13,267],'#91a58b55');
+  tugText(g,'31 m  ×  10 m',14,289,21,'#e1e7d6',true);
+  tugText(g,'示意船型 / 非实船参数',14,306,10);
+  tugText(g,q<.74?'艏护舷  /  驾驶室':'双全回转推进器',14,332,16,'#c6db96',true);
+  tugText(g,q<.74?'护舷传递推靠力，缓冲接触。':'回转改变推力方向；箭头为示意。',14,352,12,'#d5ddca');
+  tugText(g,'ASD / CONCEPT GEOMETRY',14,373,10);
+}
+function drawTugStudy(ctx,time,anchor){return drawAnchoredStudy(ctx,{...TUG_STUDY,time,anchor,title:'港作拖轮 T01',index:'ASSET / 01 · ASD TUG',paint:paintTug})}
+
+// Screen time is separate from the compressed illustrative operation clock.
+const INTRO_END=43;
+const BEATS=[
+  {start:43,end:48,from:0,to:4,camera:2,move:1.5},
+  {start:48,end:54,from:4,to:8,camera:4.8,move:1.25},
+  {start:54,end:62,from:8,to:12,camera:10.2,move:1.65},
+  {start:62,end:69,from:12,to:17,camera:13.8,move:1.4},
+  {start:69,end:76,from:17,to:22,camera:20.3,move:1.45},
+  {start:76,end:82,from:22,to:26,camera:24.6,move:1.3},
+  {start:82,end:90,from:26,to:30,camera:26.3,move:1.5}
+];
+const BRIEF_DURATION=90;
+function briefingBeat(screenTime){
+  const i=Math.max(0,BEATS.findIndex(b=>screenTime<b.end));
+  const j=screenTime>=BRIEF_DURATION?BEATS.length-1:i,b=BEATS[j];
+  const fraction=cl((screenTime-b.start)/(b.end-b.start));
+  const prev=j?BEATS[j-1].camera:0;
+  return {j,opTime:mix(b.from,b.to,fraction),cameraTime:j===6&&screenTime>=86?mix(26.3,30,ease((screenTime-86)/1.4)):mix(prev,b.camera,ease((screenTime-b.start)/b.move)),fraction,settled:screenTime>=b.start+b.move};
+}
+function screenForOperation(opTime){
+  const b=BEATS.find(b=>opTime<=b.to)||BEATS[BEATS.length-1];
+  return mix(b.start,b.end,cl((opTime-b.from)/(b.to-b.from)));
+}
+
+// Natural Earth public-domain low-resolution land mask, derived from the bundled
+// naturalearth_lowres vector fixture. Generalized for cinematic orientation,
+// not a nautical chart. https://www.naturalearthdata.com/about/terms-of-use/
+const EARTH_MASK='//////////////////////v/////////////////AP7////8//////////8HQPz//wM4/P////////8DAPj//x8A+P////////8HAAAI9PIAgP////////8PAAAAAHAAAED3//f///8DAAAAACAAAAAA8ID//x8AAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABgAAAAAAAAAAAAAAAAAABgAAAAAAAAAAAAAAAAAADgAAAAAAAAAAAAQAAAAADAAAAAAAAAAAAAgAAAAAHgAAAAAAAAAAABAAAAAAPgBAAAAAAAAADhAAAAAAPADAAAEAAAACDwAAAAAAPAHAAA8AAAA+H8AAAAAAPAPAAB+AAAA/H8AAAAAAPAPAAB+AAAA/H8AAAAAAOA/AAD+DAAA/D8AAAAAAOB/AAD/CAAA8B8AAAAAAPB/AAD/GQAA4BsAAAAAAPh/AAD/EwAAgAkAAAAAAPz/AAD/AQAAAAAAAAAAAP7/AAD/AQAAAxwAAAAAAP5/AAD/AQBAAA4AAAAAAP4fAID/AwBAFgEAAAAAAPwHAID/BwBgBwAAAAAAAPwHAML/DwAQDAAAAAAAAPwAAP//HwAAIAAAAAAAgLgAgP//H2CAAAAAAAAAwAAAwP//D2DgAAAAAAAAeAAAwP//PXD4EAAAAAAAThAAgP//fPB4AQAAAAAABgIAgP///vj7AwAAAAAADwAAgP//H///DwAAAACADwEAAP9/7///HwAAAADg/wEAAP4Z////nwAAAADw/wMAAHwA////DwMAAAD4/wcAAA7p3///XwQAAAD4/wcAAA7O3///bwAAAAD4/x8AALof7v///wkAAAD4/z8AAPi/3v///wsAAAD4/z8AAPj//////w8AAAD+//0BAPr//////w8BAAD/f/wAAAT5/////wEDAMH/H1wAAETz/////wcC4P//HwwwAMD7//////86wP///z04YAD3//////9/4f///3X8AQD+8+//////wAPA0x/8BwAwAOz///8BAAAYfQP+HwAAQID/LwgAAACY9OP/HwAAAATAAQAAAAAA8Mf/PwALAAAYAAAAAAAAgH/wHwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
+const REGION_MASK='PwAAAB4AAAAAHwAAAA4AAAAADwAAAB4AAAAADx4AAAAAAAAABx4AAAAAAAAADzwAAAAAAAAAHwAAAAAAAAAAPxgAAAAAAAAAfxAAAAAAAAAA//8BAAAAAAAA//8HAAIAAAAA//9/AAIAAAAA////AQcAAAAA////BwcAAAAA////DwYAAAAA////PwwAAAAA////PwAAAAAA////fwAAAAAA/////wAAAAAA/////wAAAAAA/////wEAAAAA/////wMAAAAA/////wcAAAAA/////w8AAAAA/////w8AAAAA/////w8AAAAA/////wcAAAAA/////wcAAAAA/////w8AIAAA/////w8AYAAA/////wcAYAAA/////wMA+AAA/////wEA+AYA/////wEAIJ4A/////wEAwNMD////fwDgAP8/////fwDgA/7//////wDgBwD//////wPgBwD//////wfwBwD+////fx/gBwDy////PwLwAwDg////DwD8AQCA////BwD8AACA////Pxh4AAAA////f3h+AAAA//////D/AQAA//////P/BwAA////////BwAA////////DwAA////////PwAA////////fwAA';
+function decodeLand(encoded,nx,ny,x0,y0,step){
+  const bytes=atob(encoded),pts=[];
+  for(let y=0;y<ny;y++)for(let x=0;x<nx;x++){const i=y*nx+x;if((bytes.charCodeAt(i>>3)>>(i&7))&1)pts.push([x0+x*step,y0+y*step])}
+  return pts;
+}
+
+const ANCHOR={x:475,z:-735,yaw:-.40};
+const FLEET=[
+  {id:'T01',role:'艏部推靠',bp:65,home:'北拖轮基地',start:{x:-35,z:370},active:true},
+  {id:'T02',role:'艉部推靠',bp:65,home:'南拖轮基地',start:{x:-35,z:-180},active:true},
+  {id:'T03',role:'进港伴航 / 待命',bp:55,home:'北拖轮基地',start:{x:5,z:430},active:false},
+  {id:'T04',role:'应急机动 / 待命',bp:55,home:'南拖轮基地',start:{x:5,z:-248},active:false}
+];
+const reserve=[{x:280,z:-205,yaw:0},{x:370,z:-440,yaw:0}];
+function fleetAt(opTime){
+  return [tugAt(opTime,0),tugAt(opTime,1),...reserve.map(o=>({...o,z:o.z+405*ease(opTime/8)+95*ease((opTime-28.5)/1.5),mode:opTime<8?'TRANSIT':opTime>=28.5?'DEPART':'STANDBY',contact:false}))];
+}
+function dispatchRoute(k){
+  const a=FLEET[k].start,b=fleetAt(0)[k];
+  const mid=[
+    [{x:78,z:355},{x:115,z:250}],
+    [{x:68,z:-135},{x:120,z:-30}],
+    [{x:100,z:465},{x:330,z:300},{x:340,z:-100}],
+    [{x:120,z:-270},{x:300,z:-500}]
+  ][k];
+  const approach={x:b.x-45*Math.sin(b.yaw),z:b.z-45*Math.cos(b.yaw)};
+  return [a,...mid,approach,b];
+}
+const shipEnd=pathAt(0);
+const shipRoute=[ANCHOR,{x:380,z:-620},{x:180,z:-460},{x:shipEnd.x-45*Math.sin(shipEnd.yaw),z:shipEnd.z-45*Math.cos(shipEnd.yaw)},shipEnd];
+function shipDispatchRoute(){return shipRoute}
+function interpolateRoute(route,u){
+  const lengths=route.slice(1).map((b,i)=>Math.hypot(b.x-route[i].x,b.z-route[i].z));
+  const total=lengths.reduce((a,b)=>a+b,0),target=cl(u)*total;let acc=0;
+  for(let i=0;i<lengths.length;i++){if(target<=acc+lengths[i]||i===lengths.length-1){const a=route[i],b=route[i+1],p=cl((target-acc)/lengths[i]);const before=route[i-1]||a,after=route[i+2]||b;
+    const length=lengths[i],norm=(x,z)=>{const n=Math.hypot(x,z)||1;return [x/n,z/n]};
+    const m0=norm(b.x-before.x,b.z-before.z),m1=norm(after.x-a.x,after.z-a.z);
+    const p2=p*p,p3=p2*p,h00=2*p3-3*p2+1,h10=p3-2*p2+p,h01=-2*p3+3*p2,h11=p3-p2;
+    const dh00=6*p2-6*p,dh10=3*p2-4*p+1,dh01=-dh00,dh11=3*p2-2*p;
+    const q=(k,j)=>h00*a[k]+h10*length*m0[j]+h01*b[k]+h11*length*m1[j];
+    const dq=(k,j)=>dh00*a[k]+dh10*length*m0[j]+dh01*b[k]+dh11*length*m1[j];
+    return {x:q('x',0),z:q('z',1),yaw:Math.atan2(dq('x',0),dq('z',1))}}acc+=lengths[i]}
+}
+function dispatchTiming(k){return {start:k===3?33.0:35.9+k*.16,end:k===3?37.5:40.6+k*.25}}
+function sampledDispatchRoute(k){return Array.from({length:65},(_,i)=>interpolateRoute(dispatchRoute(k),i/64))}
+function sampledShipRoute(){return Array.from({length:65},(_,i)=>interpolateRoute(shipRoute,i/64))}
+function dispatchTugAt(time,k){
+  const route=dispatchRoute(k),goal=route[route.length-1];
+  const {start,end}=dispatchTiming(k);
+  if(time>=end)return {...goal,mode:'AT_STATION'};
+  return {...interpolateRoute(route,ease((time-start)/(end-start))),mode:time<start?'READY':'TRANSIT'};
+}
+function dispatchShipAt(time){
+  if(time<36.8)return {...ANCHOR};
+  if(time>=42.35)return pathAt(0);
+  return interpolateRoute(shipRoute,ease((time-36.8)/(42.35-36.8)));
+}
+
+
+const C={bg:'#081411',water:'#142e28',land:'#566553',white:'#e5ebd9',mut:'#a6b6a0',dim:'#81957d',hi:'#cfe2a1',warm:'#e2b87b',grid:'#a0b79924'};
+const tau=Math.PI*2,rad=Math.PI/180;
+const land=decodeLand(EARTH_MASK,120,60,-178.5,-88.5,3);
+const region=decodeLand(REGION_MASK,72,52,104.25,17.25,.5);
+function drect(g,x,y,w,h,f,s){g.fillStyle=f;g.fillRect(x,y,w,h);if(s){g.strokeStyle=s;g.lineWidth=1;g.strokeRect(x+.5,y+.5,w-1,h-1)}}
+function dline(g,a,b,col=C.dim,w=1){g.strokeStyle=col;g.lineWidth=w;g.beginPath();g.moveTo(...a);g.lineTo(...b);g.stroke()}
+function dtext(g,s,x,y,size=12,col=C.mut,bold=false,align='left'){g.fillStyle=col;g.font=(bold?'600 ':'')+size+'px Microsoft YaHei, Arial, sans-serif';g.textAlign=align;g.textBaseline='alphabetic';g.fillText(s,x,y)}
+function dcircle(g,x,y,r,col,fill=false){g.beginPath();g.arc(x,y,r,0,tau);if(fill){g.fillStyle=col;g.fill()}else{g.strokeStyle=col;g.lineWidth=1;g.stroke()}}
+function dpath(g,points,col,w=1,dashed=false){if(!points.length)return;g.save();g.strokeStyle=col;g.lineWidth=w;if(dashed)g.setLineDash([5,6]);g.beginPath();points.forEach((p,i)=>i?g.lineTo(...p):g.moveTo(...p));g.stroke();g.restore()}
+function corners(g,x,y,r,col=C.hi){for(const a of [-1,1])for(const b of [-1,1]){dline(g,[x+a*r,y+b*r],[x+a*(r-9),y+b*r],col,1.5);dline(g,[x+a*r,y+b*r],[x+a*r,y+b*(r-9)],col,1.5)}}
+function opacity(g,a,fn){g.save();g.globalAlpha*=cl(a);fn();g.restore()}
+function show(t,a,b=.45){return ease((t-a)/b)}
+function blank(g){const bg=g.createLinearGradient(0,0,1280,720);bg.addColorStop(0,'#1b2b24');bg.addColorStop(.6,C.bg);bg.addColorStop(1,'#050d0b');drect(g,0,0,1280,720,bg)}
+function frameHead(g,code,detail){drect(g,0,0,1280,78,'#081410ec');dtext(g,'SCENEBRIEF / HARBOR OPERATIONS',42,38,13,C.hi,true);dtext(g,code,42,60,11,C.mut);dtext(g,'演示工况 / 非实测数据',1238,38,12,C.mut,false,'right');dtext(g,detail,1238,59,11,C.mut,false,'right');dline(g,[42,74],[1238,74],'#9cb19750')}
+function frameFoot(g,t,title,note,code){
+  const f=g.createLinearGradient(0,545,0,720);f.addColorStop(0,'#07120e00');f.addColorStop(.24,'#07120eac');f.addColorStop(1,'#07120ef9');drect(g,0,545,1280,175,f);
+  drect(g,42,574,3,70,C.hi);dtext(g,code,57,581,11,C.hi);dtext(g,title,57,617,32,C.white,true);dtext(g,note,57,642,15,C.mut);dline(g,[42,662],[1238,662],'#9cb19750');dtext(g,'ILLUSTRATIVE OPERATION / NOT FOR NAVIGATION',42,680,10,C.dim);
+}
+function globe(g,t){
+  blank(g);
+  for(let i=0;i<155;i++){let x=rnd(i*31)*1280,y=80+rnd(i*31+1)*510;drect(g,x,y,.7+rnd(i*31+2),.7,'#9cb49c2a')}
+  const turn=ease(t/2.6),zoom=ease((t-3.9)/2.0),lon=mix(38,122.1,turn)*rad,lat=mix(6,30.5,turn)*rad,R=mix(253,920,zoom),cx=mix(638,640,zoom),cy=mix(330,347,zoom);
+  const proj=(a,b)=>{a=a*rad-lon;b*=rad;let z=Math.sin(lat)*Math.sin(b)+Math.cos(lat)*Math.cos(b)*Math.cos(a);return [cx+R*Math.cos(b)*Math.sin(a),cy-R*(Math.cos(lat)*Math.sin(b)-Math.sin(lat)*Math.cos(b)*Math.cos(a)),z]};
+  const sphere=g.createRadialGradient(cx-R*.28,cy-R*.36,0,cx,cy,R);sphere.addColorStop(0,'#466456');sphere.addColorStop(.6,'#203d34');sphere.addColorStop(1,'#0a1816');
+  g.save();g.beginPath();g.arc(cx,cy,R,0,tau);g.clip();drect(g,0,0,1280,720,sphere);
+  for(const [x,y] of land){let [px,py,z]=proj(x,y);if(z<0||px<0||px>1280||py<0||py>720)continue;let r=R*.014*(.4+.6*z);g.fillStyle='rgba(158,184,139,'+(.24+.42*z)+')';g.fillRect(px-r,py-r,r*2,r*2)}
+  function meshLine(points){let prev=null;for(const p of points){const a=proj(...p);if(a[2]>0&&prev&&prev[2]>0)dline(g,prev.slice(0,2),a.slice(0,2),'#9db59a38',.8);prev=a}}
+  for(let a=-180;a<180;a+=30)meshLine(Array.from({length:61},(_,i)=>[a,-90+i*3]));
+  for(let a=-60;a<=60;a+=30)meshLine(Array.from({length:121},(_,i)=>[-180+i*3,a]));
+  g.restore();dcircle(g,cx,cy,R,'#99b29580');dcircle(g,cx,cy,R+3,'#8da98a22');
+  const q=proj(122.1,30.5);
+  if(q[2]>0)opacity(g,show(t,1.8),()=>{corners(g,q[0],q[1],25,C.hi);dcircle(g,q[0],q[1],7,C.hi);dpath(g,[[q[0]+24,q[1]-18],[q[0]+65,q[1]-51],[q[0]+160,q[1]-51]],C.hi);dtext(g,'EAST CHINA SEA',q[0]+68,q[1]-60,13,C.hi,true)});
+  frameHead(g,'01 / GEOLOCATION','GLOBAL LAND MASK / NATURAL EARTH');
+  frameFoot(g,t,'东海 · 进港任务定位','从全球地理空间逐级进入作业海域。','GLOBAL / REGIONAL');
+}
+function regional(g,t){
+  blank(g);const u=ease((t-5.7)/1.05),sc=mix(21,81,u),lon=mix(123,122.1,u),lat=mix(30,30.5,u),p=(a,b)=>[640+(a-lon)*sc*.866,330-(b-lat)*sc];
+  for(let y=18;y<=43;y+=2){let a=p(104,y),b=p(140,y);dline(g,a,b,C.grid);dtext(g,y+'°N',60,a[1]-3,10,C.dim)}
+  for(let x=104;x<=140;x+=2){let a=p(x,17),b=p(x,43);dline(g,a,b,C.grid);dtext(g,x+'°E',a[0]+3,94,10,C.dim)}
+  for(const [x,y] of region){let a=p(x,y);drect(g,a[0]-sc*.22,a[1]-sc*.25,sc*.435+.5,sc*.5+.5,'#62765b')}
+  const q=p(122.1,30.5);for(const r of [12,36,82])dcircle(g,...q,r,C.hi+'55');corners(g,...q,36,C.hi);dcircle(g,...q,4,C.hi,true);dpath(g,[q,[q[0]+80,q[1]-70],[q[0]+250,q[1]-70]],C.hi,1.4);
+  dtext(g,'东海沿岸 / 示意港区',q[0]+86,q[1]-86,20,C.white,true);dtext(g,'区域定位 ≠ 实际港口坐标',q[0]+86,q[1]-50,12,C.mut);
+  frameHead(g,'01 / GEOLOCATION','REGIONAL VIEW / GENERALIZED COASTLINE');
+  frameFoot(g,t,'锁定外海作业区域','区域海岸线来自 Natural Earth；后续港区布局为虚构示意。','REGIONAL / PORT');
+}
+function snapshot(tug){
+  shapes.length=0;vesselShapes({x:0,z:0,yaw:0},tug,true);
+  const faces=shapes.map(f=>({...f,ps:f.ps.map(p=>p.slice())}));shapes.length=0;return faces;
+}
+const modelTug=snapshot(true),modelShip=snapshot(false);
+function model(g,faces,x,y,scale,az,el){
+  const ca=Math.cos(az),sa=Math.sin(az),se=Math.sin(el),ce=Math.cos(el);
+  const p=([a,b,c])=>[x+(a*ca-c*sa)*scale,y+((a*sa+c*ca)*se-b*ce)*scale];
+  const depth=f=>f.ps.reduce((n,[a,b,c])=>n+(-a*sa-c*ca)*ce-b*se,0)/f.ps.length;
+  for(const f of [...faces].sort((a,b)=>(a.layer||0)-(b.layer||0)||depth(b)-depth(a))){
+    g.beginPath();f.ps.forEach((pt,i)=>{let [a,b]=p(pt);i?g.lineTo(a,b):g.moveTo(a,b)});g.closePath();g.fillStyle=f.fill;g.fill();g.strokeStyle=f.edge;g.lineWidth=.65;g.stroke();
+  }return p;
+}
+function anchorShot(g,t){
+  blank(g);const u=ease((t-8)/1.25),az=mix(.34,.72,u)+.035*Math.sin((t-9)*.5),el=mix(1.14,.60,u),scale=mix(2.25,4.5,u);
+  for(let i=0;i<820;i++){let x=rnd(i*9)*1280,y=88+rnd(i*9+1)*465;dline(g,[x,y],[x+6+rnd(i*9+2)*25,y+1.1],'#a9c5a322',.8)}
+  const p=model(g,modelShip,625+24*(1-u),355+15*(1-u),scale,az,el),bow=p([0,3,120]),chain=p([14,0,154]);
+  const drop=show(t,8.65,.85);opacity(g,drop,()=>{dpath(g,[bow,[(bow[0]+chain[0])/2,(bow[1]+chain[1])/2+12],[mix(bow[0],chain[0],drop),mix(bow[1],chain[1],drop)]],C.warm,2,true);dcircle(g,...chain,7,C.warm)});
+  opacity(g,show(t,9.15),()=>{dpath(g,[chain,[chain[0]+40,chain[1]+30],[1100,chain[1]+30]],C.warm);dtext(g,'锚泊待命',1092,chain[1]+22,22,C.white,true,'right');dtext(g,'锚链示意 / 主机待命',1092,chain[1]+49,12,C.mut,false,'right');
+    drect(g,42,119,214,119,'#0b1916de','#8ba18360');dtext(g,'MV MERIDIAN',55,144,14,C.hi,true);dtext(g,'240 m',55,181,29,C.white,true);dtext(g,'总长 / 船宽 36 m',55,206,13,C.mut);dtext(g,'抵达锚地 · 航行速度趋近零',55,225,12,C.mut);
+  });
+  frameHead(g,'02 / ANCHORAGE','ARRIVAL / A-01');
+  frameFoot(g,t,'主船抵达外锚地','保持锚泊待命，等待泊位及引航、拖轮服务协调。','VESSEL / ARRIVAL');
+}
+function request(g,t){
+  blank(g);const a=show(t,14,.45),q=show(t,17.25,.45);
+  opacity(g,a,()=>{
+    drect(g,42,105,742,405,'#0d201ae8','#82977a88');drect(g,42,105,3,70,C.hi);
+    dtext(g,'INBOUND SERVICE REQUEST / SB-017',62,133,13,C.hi,true);dtext(g,'进港靠泊申请',62,177,35,C.white,true);
+    dline(g,[62,195],[764,195],C.grid);
+    const fields=[['主船','MV MERIDIAN / 集装箱船'],['总长 × 船宽 / 吃水','240 × 36 m / 12 m'],['目标泊位','03 / 左舷靠泊'],['当前状态','外锚地 A-01 / 待命']];
+    fields.forEach(([k,v],i)=>{let y=225+i*55;dtext(g,k,64,y,13,C.mut);dtext(g,v,220,y+2,20,C.white,true);dline(g,[64,y+15],[489,y+15],C.grid)});
+    g.save();g.beginPath();g.rect(504,205,260,253);g.clip();model(g,modelShip,634,355,.92,.95,.58);g.restore();
+    dtext(g,'SHIP / PARTICULARS · CONCEPT',516,476,10,C.dim);
+    dtext(g,'协调事项：泊位可用性、引航时间、拖轮配置、系泊人员',64,483,14,C.mut);
+  });
+  opacity(g,q,()=>{
+    dpath(g,[[784,287],[814,287],[827,265]],C.hi,1.7);
+    drect(g,828,105,410,405,'#11271fe8','#a7bd8c');drect(g,828,105,3,68,C.hi);
+    dtext(g,'PORT DISPATCH / SB-017',847,133,13,C.hi,true);dtext(g,'调度作业结果',847,171,26,C.white,true);
+    dtext(g,'04',846,270,94,C.hi,true);dtext(g,'艘港作拖轮',984,256,25,C.white,true);dtext(g,'2 艘推靠 + 2 艘伴航 / 待命',849,308,20,C.white,true);
+    dline(g,[847,332],[1218,332],C.grid);dtext(g,'配置依据',847,360,13,C.mut);
+    dtext(g,'船舶尺度 · 泊位进路 · 操纵条件',847,387,16,C.white);dtext(g,'假设侧风 9 m/s · 流速 0.5 kn',847,407,13,C.mut);
+    dtext(g,'本案为示意调度结果，非实际港口配拖标准',847,428,12,C.warm);
+    dtext(g,'状态 / 四船确认后出发',847,477,14,C.hi,true);
+  });
+  frameHead(g,'03 / SERVICE COORDINATION','REQUEST → DISPATCH');
+  frameFoot(g,t,t<17.25?'建立靠泊作业需求':'港口调度：四艘拖轮','引航、拖轮与系泊服务需协调；具体配置由实际工况决定。','SERVICE REQUEST / ASSIGNMENT');
+}
+function chartBase(g,scale=.49,cx=640,cy=303,ox=105,oz=-95){
+  blank(g);const p=o=>[cx+(o.x-ox)*scale,cy-(o.z-oz)*scale],P=(x,z)=>p({x,z});
+  drect(g,0,78,1280,474,'#132d27');
+  for(let x=-600;x<=1000;x+=100){let a=P(x,-1100),b=P(x,900);dline(g,a,b,C.grid,.7)}
+  for(let z=-1100;z<=900;z+=100){let a=P(-600,z),b=P(1000,z);dline(g,a,b,C.grid,.7)}
+  let a=P(-350,420),b=P(-70,-210);drect(g,a[0],a[1],b[0]-a[0],b[1]-a[1],'#62705e','#99aa8d');
+  for(let x=-320;x<-140;x+=27)for(let z=-180;z<410;z+=31){const a=P(x,z+18);drect(g,...a,15*scale,17*scale,'#a0a88a85','#425744')}
+  const berthA=P(-70,245),berthB=P(-70,-15);dline(g,berthA,berthB,C.hi,3);
+  const buoys=[{x:20,z:-500},{x:180,z:-480},{x:35,z:-280},{x:210,z:-280},{x:240,z:30},{x:265,z:180}];
+  buoys.forEach((o,i)=>{let q=p(o);dcircle(g,...q,3,i%2?C.warm:C.hi,true)});
+  const mark=P(-88,115);dtext(g,'B03',mark[0]-7,mark[1]-7,12,C.hi,true,'right');
+  const north=P(-35,370),south=P(-35,-180);for(const [q,label] of [[north,'北基地'],[south,'南基地']]){dcircle(g,...q,10,C.mut+'80');dtext(g,label,q[0]-9,q[1]-16,12,C.mut,false,'right')}
+  dtext(g,'港池 / 示意水域',P(250,380)[0],P(250,380)[1],13,C.dim);dtext(g,'N ↑',915,115,13,C.hi,true);
+  dline(g,[900,520],[900+100*scale,520],C.mut,2);dtext(g,'100 m',900,513,10,C.mut);
+  return p;
+}
+function chartVessel(g,p,o,L,B,col,label){
+  const [x,y]=p(o),s=Math.hypot(p({x:o.x+1,z:o.z})[0]-x,p({x:o.x+1,z:o.z})[1]-y);
+  g.save();g.translate(x,y);g.rotate(o.yaw||0);const l=Math.max(L*s,12),w=Math.max(B*s,5);
+  g.beginPath();g.moveTo(0,-l/2);g.lineTo(w/2,-l*.25);g.lineTo(w/2,l/2);g.lineTo(-w/2,l/2);g.lineTo(-w/2,-l*.25);g.closePath();g.fillStyle=col;g.fill();g.strokeStyle='#d8e7c5';g.lineWidth=.7;g.stroke();g.restore();
+  if(label)dtext(g,label,x+9,y-10,12,col,true);
+}
+const cardPos=[[42,110],[960,110],[42,326],[960,326]];
+function tugCard(g,t,k,p,active){
+  const f=FLEET[k],at=24+k*2,alpha=show(t,at,.40);if(alpha<=0)return;
+  const o=dispatchTugAt(t,k),[x,y]=cardPos[k],w=278,h=188,anchor=p(o),left=x<640,edge=left?x+w:x,dy=y+68;
+  opacity(g,alpha*(active?1:.72),()=>{
+    dpath(g,[anchor,[edge+(left?34:-34),dy],[edge,dy]],active?C.hi:'#93aa8a80',active?1.6:1);
+    corners(g,...anchor,12,active?C.hi:C.mut);drect(g,x,y,w,h,'#091813f5',active?C.hi:'#82977a99');drect(g,x,y,3,40,active?C.hi:'#82977a');
+    dtext(g,'ASSET / '+f.id,x+12,y+18,11,C.hi,true);dtext(g,f.role,x+12,y+42,20,C.white,true);
+    dline(g,[x+12,y+50],[x+w-12,y+50],C.grid);
+    g.save();g.beginPath();g.rect(x+8,y+54,w-16,89);g.clip();
+    for(let v=0;v<6;v++)dline(g,[x+10,y+60+v*14],[x+w-10,y+60+v*14],C.grid);
+    model(g,modelTug,x+w*.51,y+106,4.15,(k*.6+.7)+(active?.36*Math.sin((t-at)*.9):0),.48);g.restore();
+    dtext(g,f.bp+' t',x+12,y+162,21,C.white,true);dtext(g,'系柱拖力 / 假设值',x+86,y+160,11,C.mut);dtext(g,f.home+' / '+(o.mode==='TRANSIT'?'出发':o.mode==='AT_STATION'?'到达':'已分配'),x+12,y+179,11,C.mut);
+  });
+}
+function dispatchChart(g,t){
+  const p=chartBase(g,.36,640,298,100,-170),q=p(ANCHOR);g.save();g.beginPath();g.rect(0,78,1280,474);g.clip();
+  dcircle(g,...q,20,C.warm+'88');chartVessel(g,p,ANCHOR,240,36,C.warm,'A-01 / MV MERIDIAN');
+  for(let k=0;k<FLEET.length;k++){
+    const o=dispatchTugAt(t,k);chartVessel(g,p,o,31,10,C.hi,t<24+k*2?FLEET[k].id:'');
+    opacity(g,show(t,24+k*2),()=>dpath(g,sampledDispatchRoute(k).map(p),'#bdd4a260',1.25,true));
+  }
+  const newest=Math.min(3,Math.max(0,Math.floor((t-24)/2)));
+  for(let k=0;k<4;k++)if(k!==newest)tugCard(g,t,k,p,t>=32);
+  tugCard(g,t,newest,p,true);
+  opacity(g,show(t,32,.55),()=>{drect(g,482,97,316,62,'#0a1915ed','#a9bf87');dtext(g,'04 / 04',502,136,31,C.hi,true);dtext(g,'拖轮全部分配',640,134,19,C.white,true)});
+  g.restore();frameHead(g,'04 / TUG DISPATCH','ASD FLEET / 4 ASSIGNED');
+  frameFoot(g,t,'四艘拖轮分配与定位','从两个拖轮基地调集，艏艉推靠与外侧待命角色分别确认。','FLEET / RESOURCE ALLOCATION');
+}
+function rendezvous(g,t){
+  const u=ease((t-38.8)/3.2),p=chartBase(g,mix(.36,.60,u),640,298,mix(100,115,u),mix(-170,-125,u));
+  g.save();g.beginPath();g.rect(0,78,1280,474);g.clip();const ship=dispatchShipAt(t);dpath(g,sampledShipRoute().map(p),C.warm,2,true);chartVessel(g,p,ship,240,36,C.warm,'MERIDIAN');
+  for(let k=0;k<4;k++){
+    let o=dispatchTugAt(t,k),r=dispatchRoute(k);
+    dpath(g,sampledDispatchRoute(k).map(p),'#bad19e91',1.4,true);const dest=p(r.at(-1));dcircle(g,...dest,8,C.hi+'90');chartVessel(g,p,o,31,10,C.hi,FLEET[k].id);
+  }
+  const count=FLEET.filter((_,k)=>t>=dispatchTiming(k).end).length;
+  drect(g,42,112,265,173,'#0b1916ec','#82977a99');dtext(g,'DISPATCH / RENDEZVOUS',56,135,12,C.hi,true);dtext(g,count+' / 4',56,180,38,C.white,true);dtext(g,'拖轮到达预定会合位置',56,208,14,C.mut);
+  dline(g,[56,222],[292,222],C.grid);dtext(g,t<36.8?'主船待引航与起锚协调':'起锚完成 / 驶入港区',56,248,16,C.white,true);dtext(g,'路径为压缩时间示意',56,270,11,C.mut);
+  g.restore();frameHead(g,'05 / RENDEZVOUS','ROUTE / COMPRESSED TIME');
+  frameFoot(g,t,t<41.5?'起锚与拖轮会合':'进入靠泊作业水域','四艘拖轮到达预定位置，两艘进入后续推靠，另外两艘在外侧待命。','APPROACH / RENDEZVOUS');
+}
+function drawDispatchBrief(ctx,time,W,H){
+  ctx.save();ctx.scale(W/1280,H/720);ctx.globalAlpha=1;
+  if(time<5.7)globe(ctx,time);
+  else if(time<8){regional(ctx,time);if(time<6.1)opacity(ctx,1-show(time,5.7,.4),()=>globe(ctx,time))}
+  else if(time<14)anchorShot(ctx,time);
+  else if(time<22)request(ctx,time);
+  else if(time<36)dispatchChart(ctx,time);
+  else rendezvous(ctx,time);
+  ctx.restore();
+}
+
+function line2(g,a,b,col='#b9c8a8',w=1){g.beginPath();g.moveTo(...a);g.lineTo(...b);g.strokeStyle=col;g.lineWidth=w;g.stroke()}
+function txt2(g,text,x,y,size=12,col='#a9b9a2',bold=false){g.fillStyle=col;g.font=(bold?'600 ':'')+size+'px Microsoft YaHei, Arial,sans-serif';g.fillText(text,x,y)}
+function arrow2(g,a,b,col,w=2){line2(g,a,b,col,w);let th=Math.atan2(b[1]-a[1],b[0]-a[0]);for(let k of [-1,1])line2(g,b,[b[0]-9*Math.cos(th+k*.45),b[1]-9*Math.sin(th+k*.45)],col,w)}
+function vessel2(g,x,y,w,l,yaw=0){
+  g.save();g.translate(x,y);g.rotate(yaw);g.beginPath();g.moveTo(0,-l/2);g.lineTo(w/2,-l*.34);g.lineTo(w/2,l*.42);g.lineTo(w*.33,l/2);g.lineTo(-w*.33,l/2);g.lineTo(-w/2,l*.42);g.lineTo(-w/2,-l*.34);g.closePath();g.fillStyle='#466452';g.fill();g.strokeStyle='#b6c9a8';g.lineWidth=1;g.stroke();
+  for(let i=0;i<6;i++){g.fillStyle='#829881';g.fillRect(-w*.34,-l*.25+i*l*.095,w*.68,l*.066)}g.restore();
+}
+function forcePaint(g,{w,progress}){
+  const y=167,shipX=128,hi='#c6db96',warm='#dfb584';
+  txt2(g,'横向合力与艏摇力矩',14,76,14,'#e1e7d6',true);
+  vessel2(g,shipX,y,35,159,-.055);
+  const positions=[y-48,y+48];for(let k=0;k<2;k++){
+    const yy=positions[k];g.save();g.translate(239,yy);g.rotate(-Math.PI/2);g.fillStyle='#75937a';g.fillRect(-7,-16,14,32);g.restore();
+    arrow2(g,[219,yy],[151,yy],warm,k===1?3.7:2.3);txt2(g,k===1?'F₂ 增推':'F₁',222,yy-14,12,warm,true);
+  }
+  arrow2(g,[110,y],[55,y],hi,2.5);txt2(g,'ΣF',32,y-11,14,hi,true);
+  g.strokeStyle=warm;g.lineWidth=1.6;g.beginPath();g.arc(shipX,y,58,1.9,4.4);g.stroke();const a=4.4,b=[shipX+58*Math.cos(a),y+58*Math.sin(a)];arrow2(g,[b[0]-10,b[1]+4],b,warm,1.7);txt2(g,'M',55,113,13,warm,true);
+  line2(g,[14,261],[w-14,261],'#91a58b55');txt2(g,'F横 ≈ F₁ + F₂',14,289,20,'#e1e7d6',true);txt2(g,'推力差产生艏摇力矩，修正船艏向。',14,316,13,hi);
+  txt2(g,'对称力臂下：|M| ≈ |F₂ − F₁| · l',14,344,13,'#d5ddca');txt2(g,'示意力矢量 / 非水动力计算结果',14,370,10,'#a9b9a2');
+}
+function rangePaint(g,{w,m}){
+  const hi='#c6db96',warm='#dfb584',fore=Math.max(0,m.fore),aft=Math.max(0,m.aft);
+  txt2(g,'码头基准 / 船舷测距',14,77,14,'#e1e7d6',true);
+  const quayX=43,x1=quayX+18+cl(fore/80)*126,x2=quayX+18+cl(aft/80)*126;
+  g.fillStyle='#7d8b75';g.fillRect(18,93,25,159);
+  for(let i=0;i<6;i++){g.fillStyle='#293d31';g.fillRect(40,99+i*26,5,13)}
+  g.beginPath();g.moveTo(x1+17,89);g.lineTo(x1+33,114);g.lineTo(x2+33,226);g.lineTo(x2+17,249);g.lineTo(x2,226);g.lineTo(x1,114);g.closePath();g.fillStyle='#466452';g.fill();g.strokeStyle='#b7c9a5';g.stroke();
+  arrow2(g,[x1,118],[quayX,118],warm,2);arrow2(g,[x2,221],[quayX,221],hi,2);
+  txt2(g,'艏',x1+40,122,12,warm,true);txt2(g,'艉',x2+40,225,12,hi,true);
+  line2(g,[14,261],[w-14,261],'#91a58b55');txt2(g,'艏部',14,281,12,warm);txt2(g,'艉部',162,281,12,hi);
+  txt2(g,fore.toFixed(1)+' m',14,308,23,'#e1e7d6',true);txt2(g,aft.toFixed(1)+' m',162,308,23,'#e1e7d6',true);
+  txt2(g,'距离差 '+Math.abs(fore-aft).toFixed(1)+' m',14,340,16,hi,true);txt2(g,'由演示船位计算 / 俯视间隙示意',14,371,10,'#a9b9a2');
+}
+function drawForceStudy(ctx,time,anchor){
+ return drawAnchoredStudy(ctx,{start:63.6,end:68.85,time,anchor,title:'协同推靠',index:'MECHANISM / 02',paint:forcePaint});
+}
+function drawRangeStudy(ctx,time,anchor,m){
+ return drawAnchoredStudy(ctx,{start:70.6,end:75.85,time,anchor,title:'艏艉岸距',index:'MEASUREMENT / 03',paint:(g,opt)=>rangePaint(g,{...opt,m})});
+}
+
+
+// Provisional harmonic synthesis, not a recording of an actual vessel.
+// Replace individual loop sources with licensed samples via loopSamples.
+function createSoundStage({loopSamples={},cues=[]}={}){
+  let ac,master,previous=0,events=new Set(),buses={};
+  const tau=2*Math.PI;
+  const specs={
+    harbor:{f:[31,47,63,83,109,137],a:[1,.49,.31,.27,.19,.11],mod:.5,depth:.12,pan:-.2},
+    main:{f:[26,52,78,104,130,156,208,260],a:[1,.55,.42,.25,.21,.13,.075,.04],mod:6.5,depth:.26,pan:-.1},
+    tug:{f:[37,74,111,148,185,222,296],a:[1,.72,.44,.34,.18,.11,.06],mod:9.25,depth:.3,pan:.14},
+    wash:{f:[43,53.25,68,79.5,91.75,112,131,153.5,183,219.25,251.5],a:[.45,.65,1,.72,.61,.48,.37,.3,.2,.13,.07],mod:1.25,depth:.24,pan:.2},
+    water:{f:[45,57.25,69,83.5,103,126.25,148,169,201.5,223],a:[.4,.62,.85,1,.81,.62,.4,.27,.14,.08],mod:.75,depth:.3,pan:-.18},
+    winch:{f:[46,92,138,184,276,368],a:[1,.64,.36,.31,.13,.065],mod:12,depth:.22,pan:-.18}
+  };
+  function harmonicLoop(spec){
+    const dur=4,N=ac.sampleRate*dur,buffer=ac.createBuffer(1,N,ac.sampleRate),out=buffer.getChannelData(0);
+    let peak=0;
+    for(let i=0;i<N;i++){
+      const t=i/ac.sampleRate,phase=.055*Math.sin(tau*.5*t);
+      let v=0;
+      for(let k=0;k<spec.f.length;k++)v+=spec.a[k]*Math.sin(tau*spec.f[k]*t+k*1.713+phase*(k+1));
+      v*=1-spec.depth*.5+spec.depth*.5*Math.cos(tau*spec.mod*t);
+      out[i]=v;peak=Math.max(peak,Math.abs(v));
+    }
+    for(let i=0;i<N;i++)out[i]*=.68/(peak||1);
+    return buffer;
+  }
+  function sourceFor(buffer,g){
+    const src=ac.createBufferSource();src.buffer=buffer;src.loop=true;src.connect(g);src.start();return src;
+  }
+  function addLoop(name,spec){
+    const g=ac.createGain();g.gain.value=0;
+    if(ac.createStereoPanner){const pan=ac.createStereoPanner();pan.pan.value=spec.pan;g.connect(pan);pan.connect(master)}else g.connect(master);
+    const src=sourceFor(harmonicLoop(spec),g);
+    const bus=buses[name]={g,src,sample:false};
+    if(loopSamples[name])fetch(loopSamples[name]).then(r=>{if(!r.ok)throw Error(r.status);return r.arrayBuffer()}).then(b=>ac.decodeAudioData(b)).then(buffer=>{
+      const now=ac.currentTime,old=bus.src;bus.g.gain.cancelScheduledValues(now);bus.g.gain.setTargetAtTime(0,now,.025);
+      setTimeout(()=>{try{old.stop()}catch{}bus.src=sourceFor(buffer,bus.g);bus.sample=true},110);
+    }).catch(e=>console.warn('Sample fallback:',name,e.message));
+  }
+  function init(){
+    if(ac){ac.resume().catch(()=>{});return true}
+    const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return false;
+    ac=new AC();master=ac.createGain();master.gain.value=0;
+    const limiter=ac.createDynamicsCompressor();limiter.threshold.value=-18;limiter.knee.value=10;limiter.ratio.value=4;limiter.attack.value=.006;limiter.release.value=.24;
+    master.connect(limiter);limiter.connect(ac.destination);
+    for(const [name,spec] of Object.entries(specs))addLoop(name,spec);
+    ac.resume().catch(()=>{});return true;
+  }
+  const hits={
+    window:{dur:.38,f:[65,103,174,289],amp:[.95,.42,.18,.085],decay:[12,18,24,38],gain:.29,offsets:[0,.073]},
+    rubber:{dur:.52,f:[39,67,109,151],amp:[1,.48,.22,.08],decay:[7,12,18,25],gain:.25,offsets:[0]},
+    contact:{dur:.8,f:[32,56,85,125,211],amp:[1,.6,.35,.19,.07],decay:[4,7,10,15,25],gain:.36,offsets:[0]},
+    chain:{dur:.56,f:[92,176,293,487,733],amp:[1,.46,.28,.14,.055],decay:[14,20,32,43,58],gain:.2,offsets:[0,.09,.21]},
+    rope:{dur:.65,f:[49,81,137,196],amp:[1,.49,.27,.07],decay:[5,8,13,19],gain:.17,offsets:[0,.12]}
+  };
+  function playHit(kind){
+    if(!ac||!hits[kind])return;
+    const spec=hits[kind],n=Math.ceil(ac.sampleRate*spec.dur),buffer=ac.createBuffer(1,n,ac.sampleRate),samples=buffer.getChannelData(0);
+    let peak=0;
+    for(let i=0;i<n;i++){
+      const t=i/ac.sampleRate;let v=0;
+      for(const [j,o] of spec.offsets.entries()){
+        const u=t-o;if(u<0)continue;
+        const env=Math.min(1,u/.008)*Math.min(1,(spec.dur-t)/.03)/(1+j*.75);
+        for(let k=0;k<spec.f.length;k++)v+=env*spec.amp[k]*Math.exp(-spec.decay[k]*u)*Math.sin(tau*spec.f[k]*u);
+      }
+      samples[i]=v;peak=Math.max(peak,Math.abs(v));
+    }
+    for(let i=0;i<n;i++)samples[i]*=.8/(peak||1);
+    const src=ac.createBufferSource(),g=ac.createGain();src.buffer=buffer;g.gain.value=spec.gain;src.connect(g);g.connect(master);
+    events.add(src);src.onended=()=>{events.delete(src);src.disconnect();g.disconnect()};src.start();
+  }
+  function cancel(){for(const src of events){try{src.stop()}catch{}}events.clear()}
+  function seek(time){previous=time;cancel()}
+  function update({time,cueTime=time,intro=false,introScene=0,playing,muted,volume,motion,close}){
+    if(!ac)return;const now=ac.currentTime,p=playing?1:0,eng=cl(motion.ahead/2.5);
+    const approach=ease((time-6)/2)*(1-ease((time-11)/1)),push=ease((time-11.5)/1)*(1-.82*ease((time-21)/5)),depart=ease((time-28)/.5),shore=ease((time-17)/2)*(1-ease((time-29)/1.3)),winch=ease((time-26)/.6)*(1-ease((time-29.1)/.7));
+    let gains={harbor:.06*(1-.35*close),main:.11*eng+.02,tug:(.018+.18*approach+.22*push+.12*depart)*(.5+.5*close),wash:(.012+.055*push+.035*depart)*(.5+.5*close),water:.02+.06*shore*close,winch:.14*winch};
+    if(intro)gains={harbor:.035,main:introScene===1?.065:introScene===4?.08:.006,tug:introScene===4?.075:0,wash:introScene===4?.023:0,water:introScene===1?.025:0,winch:0};
+    for(const [name,bus] of Object.entries(buses)){
+      bus.g.gain.setTargetAtTime(p*gains[name],now,.19);
+      const rate=name==='main'?.88+.15*eng:name==='tug'?.92+.10*approach+.14*push+.07*depart:1;
+      bus.src.playbackRate.setTargetAtTime(bus.sample?1:rate,now,.32);
+    }
+    master.gain.setTargetAtTime(muted?0:cl(volume),now,.09);
+    if(playing&&!muted&&cueTime>=previous&&cueTime-previous<.55)for(const [at,kind] of cues)if(previous<at&&cueTime>=at)playHit(kind);
+    if(!playing||muted)cancel();previous=cueTime;
+  }
+  return {init,update,seek,cancel};
+}
+
+'use strict';const $=x=>document.getElementById(x),stage=$('stage'),base=$('base'),ui=$('ui'),b=base.getContext('2d'),c=ui.getContext('2d');let W=1280,H=720,dpr=1,t=0,screenT=0,playing=false,started=false,last=performance.now(),idx=-1,muted=false,ready=false,T,renderer,world,camera,shipG,tugGs=[],water,threeObjects=[];const shots=[
+{a:0,z:4,code:'06 / APPROACH',title:'驶向 03 号泊位',note:'主船驶向泊位；T03 / T04 在外侧伴航与机动。'},
+{a:4,z:8,code:'07 / DECELERATION',title:'减速，建立平行船位',note:'主船继续减速；预留岸外水域供拖轮接应。'},
+{a:8,z:12,code:'08 / RENDEZVOUS',title:'拖轮接近与护舷接触',note:'拖轮沿艏向接近；减速后以橡胶护舷抵住主船外舷。'},
+{a:12,z:17,code:'09 / COORDINATION',title:'联合推靠，修正艏向',note:'艉部拖轮增推，使艉部向岸移动；两艘推靠拖轮协调横移。'},
+{a:17,z:22,code:'10 / FINAL APPROACH',title:'监测艏艉离岸距离',note:'船身趋于平行，逐步降低横移速度，接近码头护舷。'},
+{a:22,z:26,code:'11 / CONTACT',title:'最后数米：控制接触速度',note:'主船接近码头护舷，横移速度逐步趋近于零。'},
+{a:26,z:30,code:'12 / MOORING',title:'建立系泊，完成靠泊',note:'艏缆、艉缆及倒缆逐步带妥，推靠拖轮卸载，外侧拖轮解除待命。'}];
+function resize(){let r=stage.getBoundingClientRect();W=r.width;H=r.height;dpr=Math.min(devicePixelRatio||1,2);for(let cv of [base,ui]){cv.width=W*dpr;cv.height=H*dpr;cv.getContext('2d').setTransform(dpr,0,0,dpr,0,0)}if(renderer){renderer.setPixelRatio(dpr);renderer.setSize(W,H)}}addEventListener('resize',resize);resize();
+function line(g,x,y,X,Y,col='#a4b595',w=1){g.beginPath();g.moveTo(x,y);g.lineTo(X,Y);g.strokeStyle=col;g.lineWidth=w;g.stroke()}function poly(g,ps,fill,stroke,w=1){g.beginPath();ps.forEach((p,i)=>i?g.lineTo(...p):g.moveTo(...p));g.closePath();if(fill){g.fillStyle=fill;g.fill()}if(stroke){g.strokeStyle=stroke;g.lineWidth=w;g.stroke()}}function txt(g,s,x,y,size=12,col='#c5d0b7',font='Consolas, monospace',align='left',bold=false){g.font=`${bold?'600 ':''}${size}px ${font}`;g.fillStyle=col;g.textAlign=align;g.textBaseline='alphabetic';g.fillText(s,x,y)}function rect(g,x,y,w,h,fill,stroke){if(fill){g.fillStyle=fill;g.fillRect(x,y,w,h)}if(stroke){g.strokeStyle=stroke;g.lineWidth=1;g.strokeRect(x,y,w,h)}}function circle(g,x,y,r,col,w=1){g.beginPath();g.arc(x,y,r,0,Math.PI*2);g.strokeStyle=col;g.lineWidth=w;g.stroke()}function arrow(g,x,y,X,Y,col,w=1){line(g,x,y,X,Y,col,w);let a=Math.atan2(Y-y,X-x);poly(g,[[X,Y],[X-9*Math.cos(a-.4),Y-9*Math.sin(a-.4)],[X-9*Math.cos(a+.4),Y-9*Math.sin(a+.4)]],col)}
+function view(j,p,s,tugs,beat){
+  const v=harborCamera(beat.cameraTime,s,W,H);
+  if(j===2){
+    const a=ease((screenT-54)/1.65),leave=ease((screenT-61.5)/.5),f=a*(1-leave);
+    v.tx=mix(v.tx,tugs[0].x-3,f);v.tz=mix(v.tz,tugs[0].z,f);v.ty=mix(v.ty,5,f);v.cx=mix(v.cx,W*.39,f);
+  }
+  return v;
+}
+let V;function project(x,y,z){let dx=x-V.tx,dz=z-V.tz,ca=Math.cos(V.az),sa=Math.sin(V.az),ce=Math.cos(V.el),se=Math.sin(V.el);return [V.cx+(dx*ca-dz*sa)*V.scale,V.cy+(dx*sa+dz*ca)*se*V.scale-(y-V.ty)*ce*V.scale]}
+function lp(o,x,y,z){return project(...local(o,x,y,z))}
+function drawSoftware(j,p,s,tugs){let g=b;let grad=g.createLinearGradient(0,0,W,H);grad.addColorStop(0,'#30443c');grad.addColorStop(.5,'#1e3631');grad.addColorStop(1,'#10251f');g.fillStyle=grad;g.fillRect(0,0,W,H);for(let i=0;i<2400;i++){let wx=-420+rnd(i*3)*950,wz=-680+rnd(i*3+1)*1350,phase=Math.sin(t*2+i*.6),[x,y]=project(wx,.1,wz),[X,Y]=project(wx+3+rnd(i*3+2)*16,.1,wz+phase*1.6);line(g,x,y,X,Y,`rgba(172,194,164,${.026+.026*(phase+1)/2})`,.7)}shapes.length=0;portShapes();vesselShapes(s,false,false);for(let o of tugs)vesselShapes(o,true,false);let ca=Math.cos(V.az),sa=Math.sin(V.az),se=Math.sin(V.el),ce=Math.cos(V.el);let groups=new Map();for(let f of shapes){if(!groups.has(f.id))groups.set(f.id,[]);groups.get(f.id).push(f)}let depth=a=>a.ps.reduce((r,v)=>r+(-v[0]*sa-v[2]*ca)*ce-v[1]*se,0)/a.ps.length;let ordered=[...groups.values()].map(fs=>({fs,layer:fs[0].layer,d:fs.reduce((n,f)=>n+depth(f),0)/fs.length})).sort((a,b)=>a.layer-b.layer||b.d-a.d).flatMap(a=>a.fs.sort((A,B)=>depth(B)-depth(A)));for(let f of ordered){poly(g,f.ps.map(v=>project(...v)),f.fill,f.edge,j===4?.75:.55)}// water disturbance around hull and tug sterns
+for(let [k,o] of [s,...tugs].entries()){let L=k?31:240,bb=k?5:18,amp=k?(['WAIT','STANDBY'].includes(o.mode)?0:['TRANSIT','DEPART'].includes(o.mode)?.35:o.mode==='HOLD'?.12:o.mode==='APPROACH'?.6:o.mode==='REVERSE'?.45:t<22?1:.35):cl(motion(t).ahead/2.0);if(amp<.025)continue;for(let side of [-1,1])for(let i=0;i<12;i++){let z=(k&&o.mode==='REVERSE'?1:-1)*(L/2+i*(k?4:9)),x=side*(bb+i*(k?1.1:2.6)),a=lp(o,x,.1,z),d=lp(o,x+side*3,.1,z+(k&&o.mode==='REVERSE'?8:-8));line(g,...a,...d,`rgba(211,225,203,${.24*(1-i/13)*amp})`,1)}}}
+// Three.js: same scene geometry as the software renderer, with independent moving vessels.
+function meshGroup(build){shapes.length=0;build();let g=new T.Group();for(let f of shapes){let verts=[];for(let k=1;k<f.ps.length-1;k++)for(let v of [f.ps[0],f.ps[k],f.ps[k+1]])verts.push(...v);let geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(verts,3));geo.computeVertexNormals();let mat=new T.MeshBasicMaterial({color:f.fill,side:T.DoubleSide});g.add(new T.Mesh(geo,mat));let pts=f.ps.concat([f.ps[0]]).map(v=>new T.Vector3(...v));g.add(new T.Line(new T.BufferGeometry().setFromPoints(pts),new T.LineBasicMaterial({color:f.edge||'#33463c',transparent:true,opacity:.75})));}return g}
+let twinG,twinTugs=[];function initThree(namespace){T=namespace;renderer=new T.WebGLRenderer({antialias:true,alpha:false});renderer.setPixelRatio(dpr);renderer.setSize(W,H);$('gl').append(renderer.domElement);world=new T.Scene();world.background=new T.Color('#172c25');camera=new T.OrthographicCamera(-300,300,180,-180,.1,5000);let geom=new T.PlaneGeometry(3000,3000);geom.rotateX(-Math.PI/2);let mat=new T.ShaderMaterial({uniforms:{time:{value:0}},vertexShader:`varying vec3 p;void main(){p=(modelMatrix*vec4(position,1.)).xyz;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,fragmentShader:`varying vec3 p;uniform float time;void main(){float r=sin(p.x*.38+p.z*.12+time*1.5)*sin(p.z*.34-p.x*.17-time*.7);float s=sin(p.x*.09-p.z*.06+time*.2);float f=pow(max(0.,r),6.);vec3 col=mix(vec3(.09,.16,.14),vec3(.19,.28,.23),.43+s*.18)+f*.027;gl_FragColor=vec4(col,1.);}`});water=new T.Mesh(geom,mat);water.position.y=-.3;world.add(water);world.add(meshGroup(portShapes));let origin={x:0,z:0,yaw:0};shipG=meshGroup(()=>vesselShapes(origin));twinG=meshGroup(()=>vesselShapes(origin,false,true));world.add(shipG,twinG);for(let i=0;i<4;i++){let a=meshGroup(()=>vesselShapes(origin,true)),d=meshGroup(()=>vesselShapes(origin,true,true));tugGs.push(a);twinTugs.push(d);world.add(a,d)}ready=true;$('mode').textContent='SIM / WEBGL';}
+function drawThree(j,s,tugs){let sc=V.scale;camera.left=-V.cx/sc;camera.right=(W-V.cx)/sc;camera.top=V.cy/sc;camera.bottom=-(H-V.cy)/sc;let ca=Math.cos(V.az),sa=Math.sin(V.az),ce=Math.cos(V.el),se=Math.sin(V.el);camera.position.set(V.tx+sa*ce*900,V.ty+se*900,V.tz+ca*ce*900);camera.lookAt(V.tx,V.ty,V.tz);camera.updateProjectionMatrix();function set(g,o,v){g.position.set(o.x,0,o.z);g.rotation.y=o.yaw;g.visible=v}set(shipG,s,true);set(twinG,s,false);for(let k=0;k<4;k++){set(tugGs[k],tugs[k],true);set(twinTugs[k],tugs[k],false)}water.material.uniforms.time.value=t;renderer.render(world,camera)}
+// The overlay is composed at 1280 × 720, not separate fixed sidebars.
+const white='#e1e7d6',mut='#a9b9a2',accent='#c6db96',dim='#92a78a70',orange='#dfb584';function screen(v){return [v[0]*1280/W,v[1]*720/H]}function sp(x,y,z){return screen(project(x,y,z))}function sl(o,x,y,z){return screen(lp(o,x,y,z))}
+function bracket(x,y,r,col=accent){for(let a of [-1,1])for(let d of [-1,1]){line(c,x+a*r,y+d*r,x+a*(r-10),y+d*r,col,1.5);line(c,x+a*r,y+d*r,x+a*r,y+d*(r-10),col,1.5)}}function leader(pt,x,y,head,detail,col=accent){let [px,py]=pt;circle(c,px,py,4,col,1.5);let ex=x>px?x-9:x+9;line(c,px,py,ex,y-8,col,1);line(c,ex,y-8,x+(x>px?125:-125),y-8,col,1);let al=x>px?'left':'right';rect(c,al==='left'?x-3:x-165,y-5,168,35,'#102019bd');txt(c,head,x,y+9,16,col,'Microsoft YaHei, Arial, sans-serif',al,true);txt(c,detail,x,y+25,10,mut,'Consolas',al)}
+function shipMark(o,label,col=accent){let p=sl(o,0,10,0);bracket(p[0],p[1],20,col);txt(c,label,p[0]+26,p[1]-8,12,col);}
+function routeOverlay(s,j){let pts=[[158,-322],[122,-175],[65,-35],[-10,115],[-48,115]].map(v=>sp(v[0],.2,v[1]));c.setLineDash([8,7]);c.beginPath();pts.forEach((p,i)=>i?c.lineTo(...p):c.moveTo(...p));c.strokeStyle=accent;c.lineWidth=2;c.stroke();c.setLineDash([]);for(let [i,p] of pts.entries()){circle(c,...p,5,accent);txt(c,`WP-${i+1}`,...[p[0]+9,p[1]-9],10,mut)}if(j===0){let a=sp(-70,4,-5),b=sp(-70,4,235);line(c,...a,...b,accent,3);let f=sp(-78,5,115);leader(f,320,240,'03 号泊位','BERTH / 260 M');let m=sl(s,0,10,0);bracket(m[0],m[1],35,accent);leader(m,820,175,'目标船','MERIDIAN-01 / TRACKED');let p=sp(120,0,-80);txt(c,'进港航道',p[0]+40,p[1]+30,15,accent,'Microsoft YaHei,Arial,sans-serif');for(let k=0;k<7;k++){let a=sp(265,-.1,-260+k*70);arrow(c,a[0],a[1],a[0]-36,a[1]+12,'#a0b39a9b',1)}}}
+function overlay(j,p,s,tugs){c.clearRect(0,0,W,H);c.save();c.scale(W/1280,H/720);let sh=shots[j],m=motion(t),fade=ease(p*8),f=t>=29.8?1:fade;
+// Narrow identity strip and quiet positional references persist through the continuous camera move.
+let g=c.createLinearGradient(0,0,0,145);g.addColorStop(0,'#06100de6');g.addColorStop(1,'#06100d00');rect(c,0,0,1280,145,g);let h=c.createLinearGradient(0,555,0,720);h.addColorStop(0,'#08130e00');h.addColorStop(.45,'#08130ec2');h.addColorStop(1,'#08130ef4');rect(c,0,555,1280,165,h);
+txt(c,'HARBOR OPERATIONS',42,38,13,accent,'Consolas, monospace','left',true);txt(c,'BERTH 03   /   MV MERIDIAN',42,59,11,mut);txt(c,'演示工况 / 非实测数据',1238,38,12,mut,'Microsoft YaHei,Arial','right');txt(c,`泊位作业 T+${String(Math.floor(t*SIM/60)).padStart(2,'0')}:${String(Math.floor(t*SIM%60)).padStart(2,'0')}  /  压缩时间`,1238,59,12,mut,'Consolas','right');line(c,42,73,1238,73,'#9cb19740');for(let i=0;i<7;i++)rect(c,42+i*24,82,19,2,i===j?accent:i<j?'#84977c':'#334c40');
+// Berth boundary, longitudinal distance ticks, and real projected hull positions.
+let A=sp(-70,4,-15),B=sp(-70,4,245);line(c,...A,...B,'#c5d2a65c',1.4);for(let z=-15;z<=245;z+=20){let a=sp(-71,4,z),b=sp(-75,4,z);line(c,...a,...b,'#c0cbae78',1)}let q=sp(-79,4,235);if(q[0]>20&&q[0]<1250&&q[1]>110&&q[1]<525)txt(c,'B03',q[0]-8,q[1]-9,12,mut);
+function label(pt,x,y,head,detail,col=accent){let [px,py]=pt; if(px<0||px>1280||py<80||py>570)return; let right=x>px,ex=right?x-10:x+10;let yy=y-10;circle(c,px,py,4,col,1.2);line(c,px,py,ex,yy,col,1);let width=168;let lx=right?x:x-width;rect(c,lx-6,yy,width+12,44,'#0b1813cd');line(c,lx-6,yy,lx+width+6,yy,col,1.2);txt(c,head,right?x:x,y+9,16,col,'Microsoft YaHei,Arial',right?'left':'right',true);txt(c,detail,x,y+27,11,mut,'Consolas, monospace',right?'left':'right')}
+function dist(z,which){let a=sl(s,-18,3,z),worldZ=local(s,-18,3,z)[2],b=sp(-68.2,3,worldZ);if(a[0]<20||a[0]>1260||a[1]<85||a[1]>545)return;line(c,...a,...b,orange,1.9);for(let v of [a,b])circle(c,...v,3,orange,1.2);let mid=[(a[0]+b[0])/2,(a[1]+b[1])/2];txt(c,`${which}  ${Math.max(0,local(s,-18,0,z)[0]+68.2).toFixed(1)}m`,mid[0]+8,mid[1]-10,14,orange,'Consolas','left',true)}
+function tugLabel(k){let o=tugs[k],a=sl(o,0,8,0);bracket(...a,19,accent);label(a,k?1040:1030,k?390:170,k?'艉拖轮 T02':'艏拖轮 T01',o.contact?'FENDER / CONTACT':'STANDBY / APPROACH')}
+c.globalAlpha=f;
+if(j===0||j===1){let target=sp(-70,4,115);label(target,280,j===1?218:172,'03 号泊位','BERTH / 260 M');let prev=sl(s,0,12,0);bracket(...prev,30,accent);label(prev,1020,164,'主船 MERIDIAN','LOA 240 M / BEAM 36 M');let pts=[];for(let q=t;q<=12;q+=.35){let a=pathAt(q);pts.push(sp(a.x,.25,a.z))}if(pts.length>1){c.setLineDash([7,6]);for(let i=1;i<pts.length;i++)line(c,...pts[i-1],...pts[i],'#c6db968c',1.7);c.setLineDash([])}if(j===1){label(sl(s,0,26,-94),1040,142,'驾驶台','BRIDGE / MANOEUVRING');let a=sl(s,0,3,120),d=sp(s.x+Math.sin(s.yaw)*158,.25,s.z+Math.cos(s.yaw)*158);arrow(c,...a,...d,accent,2);label(sl(s,0,27,-94),230,382,'纵向减速','SPEED OVER GROUND')}}
+if(j===2&&!(t>TUG_STUDY.start&&t<TUG_STUDY.end)){let a=sl(tugs[0],0,2.6,14.8);label(a,1040,160,'橡胶护舷','BOW FENDER / PUSH CONTACT',orange);label(sl(tugs[0],0,7,4),240,320,'驾驶室','WHEELHOUSE / CONTROL');if(V.scale<5*W/1280)tugLabel(1);for(let [k,o] of tugs.slice(0,2).entries()){let a=sl(o,0,2.5,15.5),d=sl(s,18,2.5,contactZ(t,k));c.setLineDash([4,5]);line(c,...a,...d,'#d0dcb18a',1.3);c.setLineDash([])}}
+if(j===3){for(let k=0;k<2;k++){let a=sl(tugs[k],0,4,10),d=sl(s,9,4,contactZ(t,k));arrow(c,...a,...d,orange,k?4:2);txt(c,k?'F₂ / 增推':'F₁',a[0]+8,a[1]-9,14,orange,'Microsoft YaHei,Arial','left',true)}label(sl(s,0,7,60),1020,165,'艏向差','ALIGN TO QUAY',accent);let a=sl(s,0,3,0),d=sl(s,-45,3,0);arrow(c,...a,...d,accent,2.5)}
+if(j===4||j===5){dist(64,'FORE');dist(-64,'AFT');let fz=s.z+64;let nearest=-175+Math.round((fz+175)/28)*28;label(sp(-69,4,nearest),270,245,'码头护舷','RUBBER FENDER',orange);if(j===5){let a=sl(s,-18,4,64);if(a[0]>0&&a[0]<1280&&a[1]>80&&a[1]<550)bracket(...a,17,orange)}}
+if(j===6){let lines=[[-15,100,-82,245],[-15,-104,-82,-35],[-15,94,-82,161],[-15,-92,-82,77]];for(let [k,l] of lines.entries()){let u=ease(cl((t-26-k*.55)/1.1));let a=sl(s,l[0],10,l[1]),b=sp(l[2],6,l[3]);if(u>0){line(c,...a,mix(a[0],b[0],u),mix(a[1],b[1],u),'#d6ddbc',1.7);if(u>.99)circle(c,...b,4,accent)}}label(sl(s,-15,10,100),270,180,'艏缆 / 倒缆','MOORING LINES');label(sl(s,-15,10,-104),1020,390,'艉缆','STERN LINE');}
+// Quiet historical evidence: actual trajectory-derived samples, no invented live telemetry.
+if(j===1||j===4||j===5){let xx=45,yy=108,ww=174,hh=66;rect(c,xx,yy,ww,hh,'#0b1813a6');txt(c,j===1?'SOG / 纵向速度':'CLEARANCE / 艏艉离岸距离',xx+6,yy+14,10,mut,'Microsoft YaHei,Consolas');for(let n=0;n<3;n++)line(c,xx+6,yy+23+n*15,xx+ww-6,yy+23+n*15,'#84977d27');let start=j===1?0:12,end=j===1?12:26,den=j===1?3:90;let count=j===1?1:2;for(let k=0;k<count;k++){c.beginPath();let n=0;for(let q=start;q<=Math.min(t,end)+.001;q+=.15){let m=motion(q),v=j===1?m.ahead:k?m.aft:m.fore,X=xx+7+(q-start)/(end-start)*(ww-14),Y=yy+hh-8-cl(v/den)*35;n++?c.lineTo(X,Y):c.moveTo(X,Y)}c.strokeStyle=k?'#aab8ad':accent;c.lineWidth=1.25;c.stroke()}}
+// Small context information, one dominant statement and at most two live readings.
+let metrics=[['纵向速度',m.ahead.toFixed(2),'kn'],['剩余纵距',Math.max(0,115-s.z).toFixed(0),'m']];if(j===2)metrics=[['艏拖轮',tugs[0].contact?'就位':tugs[0].mode==='WAIT'?'待命':'接近',''],['艉拖轮',tugs[1].contact?'就位':tugs[1].mode==='WAIT'?'待命':'接近','']];if(j===3)metrics=[['艏向偏差',Math.abs(m.heading).toFixed(1),'°'],['横移速度',m.sway.toFixed(2),'m/s']];if(j===4||j===5)metrics=[['艏部间隙',Math.max(0,m.fore).toFixed(1),'m'],['艉部间隙',Math.max(0,m.aft).toFixed(1),'m']];if(j===6)metrics=[['系泊缆绳',String([0,1,2,3].filter(k=>t>=27.1+k*.55).length)+'/4',''],['横移速度',m.sway.toFixed(2),'m/s']];
+rect(c,42,562,3,88,accent);txt(c,sh.code,57,570,11,accent);txt(c,sh.title,57,607,32,white,'Microsoft YaHei,Arial','left',true);txt(c,sh.note,57,635,15,'#c6d1bd','Microsoft YaHei,Arial');for(let i=0;i<2;i++){let x=850+i*196;line(c,x-14,565,x-14,644,'#a1b39645');txt(c,metrics[i][0],x,576,13,mut,'Microsoft YaHei,Arial');txt(c,metrics[i][1],x,617,31,accent,'Microsoft YaHei,Consolas','left',true);txt(c,metrics[i][2],x,638,12,mut)}
+c.globalAlpha=1;if(j===2)drawTugStudy(c,t,sl(tugs[0],0,5,0));if(j===3)drawForceStudy(c,screenT,sl(s,0,5,0));if(j===4)drawRangeStudy(c,screenT,sl(s,-18,3,64),m);if(j===0||j===6){for(let k=2;k<4;k++){const a=sl(tugs[k],0,6,0);if(a[0]>50&&a[0]<1160&&a[1]>105&&a[1]<525){bracket(...a,12,mut);txt(c,'T0'+(k+1)+' / '+(j===6?'撤离':'伴航'),a[0]+15,a[1]-8,11,mut,'Microsoft YaHei,Arial')}}}line(c,42,659,1238,659,'#a5b69550');txt(c,'CONTINUOUS OPERATION / CONCEPT VISUALIZATION',42,678,10,mut);txt(c,`${String(j+6).padStart(2,'0')} / 12`,1238,678,11,mut,'Consolas','right');rect(c,0,700,1280,2,'#9bb18e26');rect(c,0,700,1280*screenT/BRIEF_DURATION,2,accent);c.restore()}
+// Shared play clock drives scene-specific sound and window Foley.
+let audioVolume=.55;
+const sound=createSoundStage({cues:[[17.25,'window'],[24,'window'],[26,'window'],[28,'window'],[30,'window'],[63.6,'window'],[70.6,'window'],...[[TUG_STUDY.start,'window'],[11.58,'rubber'],[12,'rubber'],[25.8,'contact'],[26.6,'chain'],[27.3,'rope'],[28.2,'chain']].map(([at,kind])=>[screenForOperation(at),kind])]});
+function audioInit(){sound.init()}
+function cancelFoley(){sound.cancel()}
+function cue(j){}
+function audioState(j){const intro=screenT<INTRO_END,introScene=screenT<8?0:screenT<14?1:screenT<22?2:screenT<36?3:4;sound.update({time:t,cueTime:screenT,intro,introScene,playing,muted,volume:audioVolume,motion:motion(t),close:cl((V?.scale||0)*1280/W/12)});}
+
+function clockString(value){const n=Math.floor(value);return String(Math.floor(n/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0')}
+function frame(now){
+  const dt=Math.min(.25,Math.max(0,(now-last)/1000));last=now;
+  if(playing){screenT=Math.min(BRIEF_DURATION,screenT+dt);if(screenT===BRIEF_DURATION){playing=false;$('play').textContent='▶'}}
+  if(screenT<INTRO_END){
+    t=0;$('gl').style.display='none';$('mode').textContent='BRIEF / GEO + DISPATCH';c.clearRect(0,0,W,H);drawDispatchBrief(b,screenT,W,H);audioState(-1);
+  }else{
+    const beat=briefingBeat(screenT),j=beat.j;t=beat.opTime;const s=pathAt(t),tugs=fleetAt(t);V=view(j,beat.fraction,s,tugs,beat);
+    audioState(j);
+    $('mode').textContent=ready?'SIM / WEBGL':'SIM / SOFTWARE 3D';
+    if(ready){$('gl').style.display='block';drawThree(j,s,tugs)}else{$('gl').style.display='none';drawSoftware(j,beat.fraction,s,tugs)}
+    overlay(j,beat.fraction,s,tugs);
+  }
+  $('seek').value=screenT;$('time').textContent=clockString(screenT)+' / '+clockString(BRIEF_DURATION);requestAnimationFrame(frame)
+}
+function begin(){audioInit();$('start').style.display='none';started=true;cancelFoley();screenT=0;t=0;sound.seek(0);idx=-1;playing=true;$('play').textContent='Ⅱ'}$('go').onclick=begin;function toggle(){if(!started){begin();return}audioInit();if(screenT>=BRIEF_DURATION){screenT=0;t=0;sound.seek(0);idx=-1}playing=!playing;$('play').textContent=playing?'Ⅱ':'▶'}$('play').onclick=toggle;$('restart').onclick=()=>{audioInit();cancelFoley();screenT=0;t=0;sound.seek(0);idx=-1;playing=true;$('play').textContent='Ⅱ'};$('seek').oninput=e=>{cancelFoley();screenT=+e.target.value;sound.seek(screenT);idx=-1};$('mute').onclick=()=>{muted=!muted;$('mute').textContent=muted?'音效 关':'音效 开';audioState(idx)};$('volume').oninput=e=>{audioVolume=+e.target.value;audioState(idx)};$('full').onclick=()=>{if(document.fullscreenElement)document.exitFullscreen();else stage.requestFullscreen?.().catch(()=>{})};let hide;function reveal(){$('controls').classList.add('show');clearTimeout(hide);hide=setTimeout(()=>$('controls').classList.remove('show'),1700)}stage.addEventListener('pointermove',reveal);stage.addEventListener('dblclick',()=>$('full').click());addEventListener('keydown',e=>{if(e.code==='Space'&&!['INPUT','BUTTON'].includes(e.target.tagName)){e.preventDefault();toggle()}if(e.code==='ArrowRight'||e.code==='ArrowLeft'){screenT=cl(screenT+(e.code==='ArrowRight'?2:-2),0,BRIEF_DURATION);sound.seek(screenT);idx=-1;}if(e.key.toLowerCase()==='m')$('mute').click();reveal()});requestAnimationFrame(frame);
+function disposeFailedRenderer(){ready=false;if(renderer){renderer.dispose();renderer=null;$('gl').replaceChildren()}tugGs=[];twinTugs=[];}
+(async()=>{
+  try{const namespace=await import('three');initThree(namespace);return}catch(e){disposeFailedRenderer();console.warn('Local Three.js unavailable:',e.message)}
+  for(const url of ['https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.module.js','https://unpkg.com/three@0.160.1/build/three.module.js']){
+    try{const namespace=await import(/* @vite-ignore */ url);initThree(namespace);return}catch(e){disposeFailedRenderer();console.warn('CDN Three.js unavailable:',e.message)}
+  }
+  $('mode').textContent='SIM / SOFTWARE 3D';
+})();
+</script></body></html>
