@@ -23,7 +23,7 @@ const studyFaces=buildStudy();
 function tugText(g,s,x,y,size=12,color='#a9b9a2',bold=false){g.fillStyle=color;g.font=(bold?'600 ':'')+size+'px Microsoft YaHei, Arial, sans-serif';g.fillText(s,x,y)}
 function tugLine(g,a,b,col,w=1){g.strokeStyle=col;g.lineWidth=w;g.beginPath();g.moveTo(...a);g.lineTo(...b);g.stroke()}
 function paintTug(g,{w,progress}){
-  const q=ease(cl((progress-.08)/.7)),az=mix(.77,2.83,q),el=mix(.48,-.55,q),scale=6.8;
+  const q=ease(cl((progress-.12)/.47)),az=mix(.77,2.83,q)+.075*Math.sin(progress*8),el=mix(.48,-.55,q)+.025*Math.sin(progress*7),scale=6.8;
   const sa=Math.sin(az),ca=Math.cos(az),se=Math.sin(el),ce=Math.cos(el);
   const project=([x,y,z])=>[w/2+(x*ca-z*sa)*scale,164+((x*sa+z*ca)*se-(y-2)*ce)*scale];
   const depth=f=>f.ps.reduce((sum,[x,y,z])=>sum+x*sa*ce+z*ca*ce+y*se,0)/f.ps.length;
