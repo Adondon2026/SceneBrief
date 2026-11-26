@@ -68,7 +68,7 @@ function renderModel(g,x,y,scale,az,el,reveal){
  const p=([a,b,c])=>[x+(a*ca-c*sa)*scale,y+((a*sa+c*ca)*se-b*ce)*scale];
  const depth=f=>f.ps.reduce((n,[a,b,c])=>n+(-a*sa-c*ca)*ce-b*se,0)/f.ps.length;
  const sorted=[...tugFaces].sort((a,b)=>(a.layer||0)-(b.layer||0)||depth(b)-depth(a));
- for(const f of sorted){const pts=f.ps.map(p);poly(g,pts,reveal>.35?f.fill:null,f.edge)}
+ for(const f of sorted){const pts=f.ps.map(p);alpha(g,smoothstep((reveal-.18)/.64),()=>poly(g,pts,f.fill,null));poly(g,pts,null,f.edge)}
 }
 function worldRect(g,p,x,z,w,l,h=0,fill='#657862',edge='#8fa28a'){
  const ps=[[x-w/2,z-l/2],[x+w/2,z-l/2],[x+w/2,z+l/2],[x-w/2,z+l/2]];
