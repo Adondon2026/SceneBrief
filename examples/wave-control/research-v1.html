@@ -51,7 +51,7 @@ const {shapes,vesselShapes,box}=M2;
 
 const DURATION=90;
 const SECTIONS=[
- [0,12,'01 / ENGINEERING PROBLEM','波浪中，船舶还能按要求运动吗？','同一艘船、同一航向修正任务，环境改变，运动响应也可能改变。'],
+ [0,12,'01 / ENGINEERING PROBLEM','波浪中，船舶还能按要求运动吗？','欠驱动船舶没有独立横向执行器；波浪改变载荷，也可能改变航向修正能力。'],
  [12,23,'02 / RESEARCH BASELINE','从 SHOPERA 出发','既有研究提供逆境操纵性、时均波浪载荷及操纵试验的基准；下一步面向闭环控制需求。'],
  [23,35,'03 / HYDRODYNAMIC MECHANISM','识别波浪—操纵运动的耦合','波浪参数、运动状态及桨舵作用共同影响纵荡、横荡与艏摇。'],
  [35,47,'04 / CONTROL-ORIENTED MODEL','建立面向控制的动力学模型','结合机理、约束模试验和自由操纵数据，辨识状态相关的动力学及不确定性。'],
@@ -150,7 +150,7 @@ function model(g,p,t){
  const s=35;node(g,18,95,206,60,'物理机理','势流、黏性与桨舵作用',phase(t,s+.55,.45));node(g,242,95,206,60,'实验 / 数值数据','约束模与自由操纵',phase(t,s+1.4,.45));
  alpha(g,phase(t,s+2.1,.45),()=>{path(g,[[121,155],[121,181],[233,181],[345,181],[345,155]],C.hi,1.3);arrow(g,[233,181],[233,202],C.hi)});
  node(g,75,202,316,66,'动力学结构 + 参数辨识','状态相关导数、耦合项及不确定性',phase(t,s+2.5,.5));
- alpha(g,phase(t,s+4.5,.5),()=>{arrow(g,[233,268],[233,289],C.hi);txt(g,'Mν̇ + C(ν)ν = τ + Fhydro + Fwave',18,319,16,C.white,true,'left',true);txt(g,'Yv / Yr / Nv / Nr 等：检验海况相关性',18,350,15,C.hi,true);txt(g,'示意动力学结构，非已辨识模型',18,392,12,C.mut)})
+ alpha(g,phase(t,s+4.5,.5),()=>{arrow(g,[233,268],[233,289],C.hi);txt(g,'Mν̇ + C(ν)ν = τact + FH + Fenv',18,319,16,C.white,true,'left',true);txt(g,'Yv / Yr / Nv / Nr 等：检验海况相关性',18,350,15,C.hi,true);txt(g,'示意力项划分；耦合归属与参数待辨识',18,392,12,C.mut)})
 }
 function capability(g,p,t){
  const u=phase(t,47.6,.8),v=phase(t,50,1),w=phase(t,54,1),cx=210,cy=246;
@@ -179,9 +179,9 @@ function validate(g,p,t){
 }
 function taskOverlay(g,t,pose,q,P){
  const u=phase(t,2,.8)*(1-phase(t,11.2,.65));alpha(g,u,()=>{const anchor=q(0,6,80),end=[1024,171];corners(g,anchor,19);path(g,partialPath([anchor,[anchor[0]+55,anchor[1]-22],[end[0]-30,end[1]],end],phase(t,2.1,.7)),C.hi,1.3);
- txt(g,'任务：航向修正',1024,160,27,C.white,true,'right');txt(g,'有限桨舵能力 / 波浪扰动',1024,193,15,C.mut,false,'right');
+ txt(g,'任务：航向修正',1024,160,27,C.white,true,'right');txt(g,'单桨单舵 / 无独立横向执行器',1024,193,15,C.mut,false,'right');
  const a=q(0,3,0),b=q(0,3,140),r=P(0,3,pose.z+140);arrow(g,a,b,C.warm,2);path(g,[a,r],C.hi,1.3,true);
- if(t>5.2){txt(g,'期望航向',r[0]+8,r[1]-8,13,C.hi);txt(g,'示意瞬时船艏向',b[0]+8,b[1]+14,13,C.warm)}
+ if(t>5.2){txt(g,'期望航向',r[0]+8,r[1]-8,13,C.hi);txt(g,'示意瞬时船艏向',b[0]+8,b[1]+14,13,C.warm);const v=phase(t,5.2,.65);alpha(g,v,()=>{const aft=q(0,0,-112),target=[1024,247];path(g,partialPath([aft,[aft[0]+38,aft[1]+15],target],v),C.warm,1.1);txt(g,'控制输入：转速 n / 舵角 δ',1024,237,15,C.white,true,'right');txt(g,'横向力与艏摇力矩并非独立可调',1024,264,13,C.mut,false,'right')})}
  })
 }
 function tank(g,t,cam,pose,P){
