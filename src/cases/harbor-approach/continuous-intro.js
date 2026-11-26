@@ -1,4 +1,4 @@
-import {cl,mix,ease} from '../../core/math.js';
+import {cl,mix,ease,local} from '../../core/math.js';
 import {phase,smoothstep,blendRect,partialPath,continuousKeys} from '../../core/motion-design.js';
 import {globe,regional} from './dispatch-brief.js';
 import {ANCHOR,FLEET,dispatchTugAt,dispatchShipAt,sampledShipRoute,dispatchTiming} from './dispatch-state.js';
@@ -90,9 +90,19 @@ export function drawContinuousIntro(g,t,W,H){
    const detail=t<DISPATCH_START?phase(t,7.2,1.15)*(1-phase(t,16.65,1.1)):post?phase(t,40.7,2.2)*.85:0;
    const anchors=drawLabWorld(g,t,cam,inLab?labActive(labT):-1,{ship,positions,detail,routeTime:labT,showRoutes:t>=DISPATCH_START,shipTag:detail<.45});
    if(t<7.75)alpha(g,1-phase(t,7,.75),()=>regional(g,t,false));
+   if(t>=8&&t<18){
+     const a=labProject(cam,...local(ship,0,2,119)),b=labProject(cam,...local(ship,10,0,152)),u=phase(t,8.15,.9),fade=1-phase(t,16.7,1.2);
+     alpha(g,u*fade,()=>{path(g,partialPath([a,[mix(a[0],b[0],.48),mix(a[1],b[1],.48)+7],b],u),C.warm,1.7,true);if(u>.85){mark(g,b,8,C.warm);if(t<11.5)text(g,'锚链 / 示意',b[0]+12,b[1]+14,12,C.warm)}})
+   }
    if(t>=8&&t<12)headerLabel(g,t,labProject(cam,ship.x,0,ship.z));
    if(t>=11&&t<18.4)requestPanel(g,t,labProject(cam,ship.x,8,ship.z));
-   if(inLab)drawLabDossiers(g,labT,anchors);
+   if(inLab){
+     drawLabDossiers(g,labT,anchors);
+     const assigned=FLEET.filter((_,k)=>labT>=LAB_STARTS[k]+.8).length;
+     alpha(g,phase(labT,0,.55),()=>{text(g,'ALLOCATED',1110,104,11,C.mut,false,'right');text(g,String(assigned).padStart(2,'0')+' / 04',1230,104,23,C.hi,true,'right')});
+     if(labT<LAB_STARTS[0])alpha(g,phase(labT,0,.35)*(1-phase(labT,1.4,.4)),()=>{text(g,'四拖轮资源定位',42,130,30,C.white,true);text(g,'北 / 南拖轮基地',42,153,14,C.mut)});
+     if(labT>=LAB_FINAL)alpha(g,phase(labT,LAB_FINAL,.65),()=>{text(g,'四船确认 / 等待出发',42,126,27,C.white,true);text(g,'2 艘推靠 + 2 艘伴航与待命',42,150,14,C.mut)});
+   }
    if(post)drawRendezvous(g,t,cam,ship,positions,anchors);
  }
  g.restore();
