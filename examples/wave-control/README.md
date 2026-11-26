@@ -28,3 +28,7 @@
 ## 播放与维护
 
 下载 [research-v1.html](research-v1.html) 原始文件后在浏览器打开；[research-v1.srt](research-v1.srt) 为独立旁白轨。开发模式运行 npm run dev 后打开 /research.html。源码位于 src/cases/wave-control/research-film.js。181 个模拟绘制时间点与播放器暂停、拖动、重播检查通过。
+
+## V2 Motion Lab 02
+
+[26 秒文献—图表—物理场景实验](research-motion-lab-v2.html)；[开工审查、分镜及验证记录](MOTION-LAB-02.md)。完整90秒 V1 暂不修改。
