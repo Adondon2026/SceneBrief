@@ -4,10 +4,10 @@ export const ANCHOR={x:475,z:-735,yaw:-.40};
 export const FLEET=[
   {id:'T01',role:'艏部推靠',bp:65,home:'北拖轮基地',start:{x:-35,z:370},active:true},
   {id:'T02',role:'艉部推靠',bp:65,home:'南拖轮基地',start:{x:-35,z:-180},active:true},
-  {id:'T03',role:'进港伴航 / 待命',bp:55,home:'北拖轮基地',start:{x:5,z:370},active:false},
-  {id:'T04',role:'应急机动 / 待命',bp:55,home:'南拖轮基地',start:{x:5,z:-180},active:false}
+  {id:'T03',role:'进港伴航 / 待命',bp:55,home:'北拖轮基地',start:{x:5,z:430},active:false},
+  {id:'T04',role:'应急机动 / 待命',bp:55,home:'南拖轮基地',start:{x:5,z:-248},active:false}
 ];
-const reserve=[{x:280,z:-205,yaw:0},{x:310,z:-470,yaw:0}];
+const reserve=[{x:280,z:-205,yaw:0},{x:370,z:-440,yaw:0}];
 export function fleetAt(opTime){
   return [tugAt(opTime,0),tugAt(opTime,1),...reserve.map(o=>({...o,z:o.z+405*ease(opTime/8)+95*ease((opTime-28.5)/1.5),mode:opTime<8?'TRANSIT':opTime>=28.5?'DEPART':'STANDBY',contact:false}))];
 }
@@ -16,8 +16,8 @@ export function dispatchRoute(k){
   const mid=[
     [{x:78,z:355},{x:115,z:250}],
     [{x:68,z:-135},{x:120,z:-30}],
-    [{x:95,z:430},{x:330,z:300},{x:340,z:-100}],
-    [{x:105,z:-215},{x:230,z:-490}]
+    [{x:100,z:465},{x:330,z:300},{x:340,z:-100}],
+    [{x:120,z:-270},{x:300,z:-500}]
   ][k];
   const approach={x:b.x-45*Math.sin(b.yaw),z:b.z-45*Math.cos(b.yaw)};
   return [a,...mid,approach,b];
@@ -39,7 +39,7 @@ function interpolateRoute(route,u){
 }
 export function dispatchTugAt(time,k){
   const route=dispatchRoute(k),goal=route[route.length-1];
-  const start=35.9+k*.16,end=40.6+k*.25;
+  const start=k===3?33.0:35.9+k*.16,end=k===3?37.5:40.6+k*.25;
   if(time>=end)return {...goal,mode:'WAIT'};
   return {...interpolateRoute(route,ease((time-start)/(end-start))),mode:time<start?'WAIT':'TRANSIT'};
 }
