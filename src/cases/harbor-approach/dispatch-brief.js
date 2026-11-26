@@ -1,7 +1,7 @@
 import {cl,mix,ease,rnd} from '../../core/math.js';
 import {shapes,vesselShapes} from './geometry.js';
 import {EARTH_MASK,REGION_MASK,decodeLand} from './earth-data.js';
-import {ANCHOR,FLEET,dispatchRoute,dispatchTugAt,dispatchShipAt,shipDispatchRoute} from './dispatch-state.js';
+import {ANCHOR,FLEET,dispatchRoute,dispatchTugAt,dispatchShipAt,shipDispatchRoute,sampledDispatchRoute,sampledShipRoute,dispatchTiming} from './dispatch-state.js';
 
 const C={bg:'#081411',water:'#142e28',land:'#566553',white:'#e5ebd9',mut:'#a6b6a0',dim:'#81957d',hi:'#cfe2a1',warm:'#e2b87b',grid:'#a0b79924'};
 const tau=Math.PI*2,rad=Math.PI/180;
@@ -16,7 +16,7 @@ function corners(g,x,y,r,col=C.hi){for(const a of [-1,1])for(const b of [-1,1]){
 function opacity(g,a,fn){g.save();g.globalAlpha*=cl(a);fn();g.restore()}
 function show(t,a,b=.45){return ease((t-a)/b)}
 function blank(g){const bg=g.createLinearGradient(0,0,1280,720);bg.addColorStop(0,'#1b2b24');bg.addColorStop(.6,C.bg);bg.addColorStop(1,'#050d0b');drect(g,0,0,1280,720,bg)}
-function frameHead(g,code,detail){dtext(g,'SCENEBRIEF / HARBOR OPERATIONS',42,38,13,C.hi,true);dtext(g,code,42,60,11,C.mut);dtext(g,'演示工况 / 非实测数据',1238,38,12,C.mut,false,'right');dtext(g,detail,1238,59,11,C.mut,false,'right');dline(g,[42,74],[1238,74],'#9cb19750')}
+function frameHead(g,code,detail){drect(g,0,0,1280,78,'#081410ec');dtext(g,'SCENEBRIEF / HARBOR OPERATIONS',42,38,13,C.hi,true);dtext(g,code,42,60,11,C.mut);dtext(g,'演示工况 / 非实测数据',1238,38,12,C.mut,false,'right');dtext(g,detail,1238,59,11,C.mut,false,'right');dline(g,[42,74],[1238,74],'#9cb19750')}
 function frameFoot(g,t,title,note,code){
   const f=g.createLinearGradient(0,545,0,720);f.addColorStop(0,'#07120e00');f.addColorStop(.24,'#07120eac');f.addColorStop(1,'#07120ef9');drect(g,0,545,1280,175,f);
   drect(g,42,574,3,70,C.hi);dtext(g,code,57,581,11,C.hi);dtext(g,title,57,617,32,C.white,true);dtext(g,note,57,642,15,C.mut);dline(g,[42,662],[1238,662],'#9cb19750');dtext(g,'ILLUSTRATIVE OPERATION / NOT FOR NAVIGATION',42,680,10,C.dim);
@@ -39,7 +39,7 @@ function globe(g,t){
   frameFoot(g,t,'东海 · 进港任务定位','从全球地理空间逐级进入作业海域。','GLOBAL / REGIONAL');
 }
 function regional(g,t){
-  blank(g);const u=ease((t-5.7)/2.0),sc=mix(21,81,u),lon=mix(123,122.1,u),lat=mix(30,30.5,u),p=(a,b)=>[640+(a-lon)*sc*.866,330-(b-lat)*sc];
+  blank(g);const u=ease((t-5.7)/1.05),sc=mix(21,81,u),lon=mix(123,122.1,u),lat=mix(30,30.5,u),p=(a,b)=>[640+(a-lon)*sc*.866,330-(b-lat)*sc];
   for(let y=18;y<=43;y+=2){let a=p(104,y),b=p(140,y);dline(g,a,b,C.grid);dtext(g,y+'°N',60,a[1]-3,10,C.dim)}
   for(let x=104;x<=140;x+=2){let a=p(x,17),b=p(x,43);dline(g,a,b,C.grid);dtext(g,x+'°E',a[0]+3,94,10,C.dim)}
   for(const [x,y] of region){let a=p(x,y);drect(g,a[0]-sc*.22,a[1]-sc*.25,sc*.435+.5,sc*.5+.5,'#62765b')}
@@ -122,7 +122,7 @@ function chartVessel(g,p,o,L,B,col,label){
 const cardPos=[[42,110],[960,110],[42,326],[960,326]];
 function tugCard(g,t,k,p,active){
   const f=FLEET[k],at=24+k*2,alpha=show(t,at,.40);if(alpha<=0)return;
-  const [x,y]=cardPos[k],w=278,h=188,anchor=p(dispatchTugAt(t,k)),left=x<640,edge=left?x+w:x,dy=y+68;
+  const o=dispatchTugAt(t,k),[x,y]=cardPos[k],w=278,h=188,anchor=p(o),left=x<640,edge=left?x+w:x,dy=y+68;
   opacity(g,alpha*(active?1:.72),()=>{
     dpath(g,[anchor,[edge+(left?34:-34),dy],[edge,dy]],active?C.hi:'#93aa8a80',active?1.6:1);
     corners(g,...anchor,12,active?C.hi:C.mut);drect(g,x,y,w,h,'#091813f5',active?C.hi:'#82977a99');drect(g,x,y,3,40,active?C.hi:'#82977a');
@@ -131,34 +131,34 @@ function tugCard(g,t,k,p,active){
     g.save();g.beginPath();g.rect(x+8,y+54,w-16,89);g.clip();
     for(let v=0;v<6;v++)dline(g,[x+10,y+60+v*14],[x+w-10,y+60+v*14],C.grid);
     model(g,modelTug,x+w*.51,y+106,4.15,(k*.6+.7)+(active?.36*Math.sin((t-at)*.9):0),.48);g.restore();
-    dtext(g,f.bp+' t',x+12,y+162,21,C.white,true);dtext(g,'系柱拖力 / 假设值',x+86,y+160,11,C.mut);dtext(g,f.home+' / 已分配',x+12,y+179,11,C.mut);
+    dtext(g,f.bp+' t',x+12,y+162,21,C.white,true);dtext(g,'系柱拖力 / 假设值',x+86,y+160,11,C.mut);dtext(g,f.home+' / '+(o.mode==='TRANSIT'?'出发':o.mode==='AT_STATION'?'到达':'已分配'),x+12,y+179,11,C.mut);
   });
 }
 function dispatchChart(g,t){
-  const p=chartBase(g,.36,640,298,100,-170),q=p(ANCHOR);
+  const p=chartBase(g,.36,640,298,100,-170),q=p(ANCHOR);g.save();g.beginPath();g.rect(0,78,1280,474);g.clip();
   dcircle(g,...q,20,C.warm+'88');chartVessel(g,p,ANCHOR,240,36,C.warm,'A-01 / MV MERIDIAN');
   for(let k=0;k<FLEET.length;k++){
     const o=dispatchTugAt(t,k);chartVessel(g,p,o,31,10,C.hi,t<24+k*2?FLEET[k].id:'');
-    opacity(g,show(t,24+k*2),()=>dpath(g,dispatchRoute(k).map(p),'#bdd4a260',1.25,true));
+    opacity(g,show(t,24+k*2),()=>dpath(g,sampledDispatchRoute(k).map(p),'#bdd4a260',1.25,true));
   }
   const newest=Math.min(3,Math.max(0,Math.floor((t-24)/2)));
   for(let k=0;k<4;k++)if(k!==newest)tugCard(g,t,k,p,t>=32);
   tugCard(g,t,newest,p,true);
   opacity(g,show(t,32,.55),()=>{drect(g,482,97,316,62,'#0a1915ed','#a9bf87');dtext(g,'04 / 04',502,136,31,C.hi,true);dtext(g,'拖轮全部分配',640,134,19,C.white,true)});
-  frameHead(g,'04 / TUG DISPATCH','ASD FLEET / 4 ASSIGNED');
+  g.restore();frameHead(g,'04 / TUG DISPATCH','ASD FLEET / 4 ASSIGNED');
   frameFoot(g,t,'四艘拖轮分配与定位','从两个拖轮基地调集，艏艉推靠与外侧待命角色分别确认。','FLEET / RESOURCE ALLOCATION');
 }
 function rendezvous(g,t){
   const u=ease((t-38.8)/3.2),p=chartBase(g,mix(.36,.60,u),640,298,mix(100,115,u),mix(-170,-125,u));
-  const ship=dispatchShipAt(t);dpath(g,shipDispatchRoute().map(p),C.warm,2,true);chartVessel(g,p,ship,240,36,C.warm,'MERIDIAN');
+  g.save();g.beginPath();g.rect(0,78,1280,474);g.clip();const ship=dispatchShipAt(t);dpath(g,sampledShipRoute().map(p),C.warm,2,true);chartVessel(g,p,ship,240,36,C.warm,'MERIDIAN');
   for(let k=0;k<4;k++){
     let o=dispatchTugAt(t,k),r=dispatchRoute(k);
-    dpath(g,r.map(p),'#bad19e91',1.4,true);const dest=p(r.at(-1));dcircle(g,...dest,8,C.hi+'90');chartVessel(g,p,o,31,10,C.hi,FLEET[k].id);
+    dpath(g,sampledDispatchRoute(k).map(p),'#bad19e91',1.4,true);const dest=p(r.at(-1));dcircle(g,...dest,8,C.hi+'90');chartVessel(g,p,o,31,10,C.hi,FLEET[k].id);
   }
-  const count=FLEET.filter((_,k)=>t>=40.6+k*.25).length;
+  const count=FLEET.filter((_,k)=>t>=dispatchTiming(k).end).length;
   drect(g,42,112,265,173,'#0b1916ec','#82977a99');dtext(g,'DISPATCH / RENDEZVOUS',56,135,12,C.hi,true);dtext(g,count+' / 4',56,180,38,C.white,true);dtext(g,'拖轮到达预定会合位置',56,208,14,C.mut);
-  dline(g,[56,222],[292,222],C.grid);dtext(g,t<36.8?'主船等待起锚许可':'主船起锚后驶入港区',56,248,16,C.white,true);dtext(g,'路径为压缩时间示意',56,270,11,C.mut);
-  frameHead(g,'05 / RENDEZVOUS','ROUTE / COMPRESSED TIME');
+  dline(g,[56,222],[292,222],C.grid);dtext(g,t<36.8?'主船待引航与起锚协调':'起锚完成 / 驶入港区',56,248,16,C.white,true);dtext(g,'路径为压缩时间示意',56,270,11,C.mut);
+  g.restore();frameHead(g,'05 / RENDEZVOUS','ROUTE / COMPRESSED TIME');
   frameFoot(g,t,t<41.5?'起锚与拖轮会合':'进入靠泊作业水域','四艘拖轮到达预定位置，两艘进入后续推靠，另外两艘在外侧待命。','APPROACH / RENDEZVOUS');
 }
 export function drawDispatchBrief(ctx,time,W,H){
