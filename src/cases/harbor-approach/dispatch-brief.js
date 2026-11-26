@@ -21,10 +21,10 @@ function frameFoot(g,t,title,note,code){
   const f=g.createLinearGradient(0,545,0,720);f.addColorStop(0,'#07120e00');f.addColorStop(.24,'#07120eac');f.addColorStop(1,'#07120ef9');drect(g,0,545,1280,175,f);
   drect(g,42,574,3,70,C.hi);dtext(g,code,57,581,11,C.hi);dtext(g,title,57,617,32,C.white,true);dtext(g,note,57,642,15,C.mut);dline(g,[42,662],[1238,662],'#9cb19750');dtext(g,'ILLUSTRATIVE OPERATION / NOT FOR NAVIGATION',42,680,10,C.dim);
 }
-function globe(g,t){
+export function globe(g,t,chrome=true){
   blank(g);
   for(let i=0;i<155;i++){let x=rnd(i*31)*1280,y=80+rnd(i*31+1)*510;drect(g,x,y,.7+rnd(i*31+2),.7,'#9cb49c2a')}
-  const turn=ease(t/2.6),zoom=ease((t-3.9)/2.0),lon=mix(38,122.1,turn)*rad,lat=mix(6,30.5,turn)*rad,R=mix(253,920,zoom),cx=mix(638,640,zoom),cy=mix(330,347,zoom);
+  const turn=ease(t/2.6),zoom=ease((t-3.25)/2.5),lon=mix(38,122.1,turn)*rad,lat=(mix(6,30.5,turn)+.25*Math.sin(t*.8)*(1-zoom))*rad,R=mix(253,920,zoom),cx=mix(638,640,zoom),cy=mix(330,347,zoom);
   const proj=(a,b)=>{a=a*rad-lon;b*=rad;let z=Math.sin(lat)*Math.sin(b)+Math.cos(lat)*Math.cos(b)*Math.cos(a);return [cx+R*Math.cos(b)*Math.sin(a),cy-R*(Math.cos(lat)*Math.sin(b)-Math.sin(lat)*Math.cos(b)*Math.cos(a)),z]};
   const sphere=g.createRadialGradient(cx-R*.28,cy-R*.36,0,cx,cy,R);sphere.addColorStop(0,'#466456');sphere.addColorStop(.6,'#203d34');sphere.addColorStop(1,'#0a1816');
   g.save();g.beginPath();g.arc(cx,cy,R,0,tau);g.clip();drect(g,0,0,1280,720,sphere);
@@ -35,18 +35,18 @@ function globe(g,t){
   g.restore();dcircle(g,cx,cy,R,'#99b29580');dcircle(g,cx,cy,R+3,'#8da98a22');
   const q=proj(122.1,30.5);
   if(q[2]>0)opacity(g,show(t,1.8),()=>{corners(g,q[0],q[1],25,C.hi);dcircle(g,q[0],q[1],7,C.hi);dpath(g,[[q[0]+24,q[1]-18],[q[0]+65,q[1]-51],[q[0]+160,q[1]-51]],C.hi);dtext(g,'EAST CHINA SEA',q[0]+68,q[1]-60,13,C.hi,true)});
-  frameHead(g,'01 / GEOLOCATION','GLOBAL LAND MASK / NATURAL EARTH');
-  frameFoot(g,t,'东海 · 进港任务定位','从全球地理空间逐级进入作业海域。','GLOBAL / REGIONAL');
+  if(chrome){frameHead(g,'01 / GEOLOCATION','GLOBAL LAND MASK / NATURAL EARTH');
+  frameFoot(g,t,'东海 · 进港任务定位','从全球地理空间逐级进入作业海域。','GLOBAL / REGIONAL');}
 }
-function regional(g,t){
-  blank(g);const u=ease((t-5.7)/1.05),sc=mix(21,81,u),lon=mix(123,122.1,u),lat=mix(30,30.5,u),p=(a,b)=>[640+(a-lon)*sc*.866,330-(b-lat)*sc];
+export function regional(g,t,chrome=true){
+  blank(g);const u=ease((t-5.1)/2.5),sc=mix(21,112,u),lon=mix(123,122.1,u),lat=mix(30,30.5,u),p=(a,b)=>[640+(a-lon)*sc*.866,330-(b-lat)*sc];
   for(let y=18;y<=43;y+=2){let a=p(104,y),b=p(140,y);dline(g,a,b,C.grid);dtext(g,y+'°N',60,a[1]-3,10,C.dim)}
   for(let x=104;x<=140;x+=2){let a=p(x,17),b=p(x,43);dline(g,a,b,C.grid);dtext(g,x+'°E',a[0]+3,94,10,C.dim)}
   for(const [x,y] of region){let a=p(x,y);drect(g,a[0]-sc*.22,a[1]-sc*.25,sc*.435+.5,sc*.5+.5,'#62765b')}
   const q=p(122.1,30.5);for(const r of [12,36,82])dcircle(g,...q,r,C.hi+'55');corners(g,...q,36,C.hi);dcircle(g,...q,4,C.hi,true);dpath(g,[q,[q[0]+80,q[1]-70],[q[0]+250,q[1]-70]],C.hi,1.4);
   dtext(g,'东海沿岸 / 示意港区',q[0]+86,q[1]-86,20,C.white,true);dtext(g,'区域定位 ≠ 实际港口坐标',q[0]+86,q[1]-50,12,C.mut);
-  frameHead(g,'01 / GEOLOCATION','REGIONAL VIEW / GENERALIZED COASTLINE');
-  frameFoot(g,t,'锁定外海作业区域','区域海岸线来自 Natural Earth；后续港区布局为虚构示意。','REGIONAL / PORT');
+  if(chrome){frameHead(g,'01 / GEOLOCATION','REGIONAL VIEW / GENERALIZED COASTLINE');
+  frameFoot(g,t,'锁定外海作业区域','区域海岸线来自 Natural Earth；后续港区布局为虚构示意。','REGIONAL / PORT');}
 }
 function snapshot(tug){
   shapes.length=0;vesselShapes({x:0,z:0,yaw:0},tug,true);
