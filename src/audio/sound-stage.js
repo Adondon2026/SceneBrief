@@ -74,18 +74,19 @@ export function createSoundStage({loopSamples={},cues=[]}={}){
   }
   function cancel(){for(const src of events){try{src.stop()}catch{}}events.clear()}
   function seek(time){previous=time;cancel()}
-  function update({time,playing,muted,volume,motion,close}){
+  function update({time,cueTime=time,intro=false,introScene=0,playing,muted,volume,motion,close}){
     if(!ac)return;const now=ac.currentTime,p=playing?1:0,eng=cl(motion.ahead/2.5);
     const approach=ease((time-6)/2)*(1-ease((time-11)/1)),push=ease((time-11.5)/1)*(1-.82*ease((time-21)/5)),depart=ease((time-28)/.5),shore=ease((time-17)/2)*(1-ease((time-29)/1.3)),winch=ease((time-26)/.6)*(1-ease((time-29.1)/.7));
-    const gains={harbor:.06*(1-.35*close),main:.11*eng+.02,tug:(.018+.18*approach+.22*push+.12*depart)*(.5+.5*close),wash:(.012+.055*push+.035*depart)*(.5+.5*close),water:.02+.06*shore*close,winch:.14*winch};
+    let gains={harbor:.06*(1-.35*close),main:.11*eng+.02,tug:(.018+.18*approach+.22*push+.12*depart)*(.5+.5*close),wash:(.012+.055*push+.035*depart)*(.5+.5*close),water:.02+.06*shore*close,winch:.14*winch};
+    if(intro)gains={harbor:.035,main:introScene===1?.065:introScene===4?.08:.006,tug:introScene===4?.075:0,wash:introScene===4?.023:0,water:introScene===1?.025:0,winch:0};
     for(const [name,bus] of Object.entries(buses)){
       bus.g.gain.setTargetAtTime(p*gains[name],now,.19);
       const rate=name==='main'?.88+.15*eng:name==='tug'?.92+.10*approach+.14*push+.07*depart:1;
       bus.src.playbackRate.setTargetAtTime(bus.sample?1:rate,now,.32);
     }
     master.gain.setTargetAtTime(muted?0:cl(volume),now,.09);
-    if(playing&&!muted&&time>=previous&&time-previous<.55)for(const [at,kind] of cues)if(previous<at&&time>=at)playHit(kind);
-    if(!playing||muted)cancel();previous=time;
+    if(playing&&!muted&&cueTime>=previous&&cueTime-previous<.55)for(const [at,kind] of cues)if(previous<at&&cueTime>=at)playHit(kind);
+    if(!playing||muted)cancel();previous=cueTime;
   }
   return {init,update,seek,cancel};
 }
