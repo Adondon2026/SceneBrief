@@ -140,7 +140,7 @@ function drawConnection(g,t,k,st,active){
  if(!st.ready)return;const [x,y,w,h]=st.rect,a=st.anchor;
  const edge=[x,y+h*.47],mid=[mix(a[0],edge[0],.72),edge[1]];
  const p=partialPath([a,[mid[0],a[1]],mid,edge],st.trace);
- alpha(g,mix(.94,.34,st.dock),()=>path(g,p,k===active?C.hi:C.mut,k===active?1.5:1));
+ alpha(g,mix(.94,.22,st.dock),()=>path(g,p,k===active?C.hi:C.mut,k===active?1.5:1));
  if(st.lock>0){alpha(g,mix(.95,.60,st.dock)*st.lock,()=>{corners(g,a,mix(29,13,st.lock),k===active?C.hi:C.mut);circle(g,a,3,k===active?C.hi:C.mut,true)})}
 }
 export function drawMotionLab(g,t,W,H){
@@ -156,7 +156,7 @@ export function drawMotionLab(g,t,W,H){
  const top=g.createLinearGradient(0,0,0,108);top.addColorStop(0,'#06110eea');top.addColorStop(1,'#06110e00');rect(g,0,0,1280,108,top);
  mono(g,'SCENEBRIEF / PORT DISPATCH',42,36,13,C.hi);mono(g,'OP.017  /  BERTH 03  /  MV MERIDIAN',42,56,11,C.mut);text(g,'演示工况 / 非实测数据',1238,36,12,C.mut,false,'right');line(g,[42,70],[1238,70],'#a7bd9650');
  const assigned=FLEET.filter((_,k)=>t>=LAB_STARTS[k]+.8).length;
- mono(g,'ALLOCATED',1238,94,10,C.mut,'right');text(g,String(assigned).padStart(2,'0')+' / 04',1238,126,26,C.hi,true,'right');
+ mono(g,'ALLOCATED',1129,59,10,C.mut,'right');text(g,String(assigned).padStart(2,'0')+' / 04',1238,61,20,C.hi,true,'right');
  if(active<0&&t<LAB_STARTS[0]){alpha(g,1-phase(t,1.6,.4),()=>{text(g,'四拖轮调度',44,125,35,C.white,true);text(g,'两个基地 · 四个作业角色',46,152,15,C.mut)})}
  if(t>=LAB_FINAL){const a=phase(t,LAB_FINAL,.9);alpha(g,a,()=>{text(g,'四船确认 / 等待出发',44,118,27,C.white,true);text(g,'2 艘推靠 + 2 艘伴航与待命',46,143,14,C.mut);mono(g,'DISPATCH COMPLETE',46,164,11,C.hi)})}
  const bottom=g.createLinearGradient(0,662,0,720);bottom.addColorStop(0,'#08151100');bottom.addColorStop(1,'#081511ef');rect(g,0,662,1280,58,bottom);
