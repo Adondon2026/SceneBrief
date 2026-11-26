@@ -64,8 +64,8 @@ function model(g,faces,x,y,scale,az,el){
 function anchorShot(g,t){
   blank(g);const u=ease((t-8)/1.25),az=mix(.34,.72,u)+.035*Math.sin((t-9)*.5),el=mix(1.14,.60,u),scale=mix(2.25,4.5,u);
   for(let i=0;i<820;i++){let x=rnd(i*9)*1280,y=88+rnd(i*9+1)*465;dline(g,[x,y],[x+6+rnd(i*9+2)*25,y+1.1],'#a9c5a322',.8)}
-  const p=model(g,modelShip,625,355,scale,az,el),bow=p([0,3,120]),chain=p([14,0,154]);
-  dpath(g,[bow,[(bow[0]+chain[0])/2,(bow[1]+chain[1])/2+12],chain],C.warm,2,true);dcircle(g,...chain,7,C.warm);
+  const p=model(g,modelShip,625+24*(1-u),355+15*(1-u),scale,az,el),bow=p([0,3,120]),chain=p([14,0,154]);
+  const drop=show(t,8.65,.85);opacity(g,drop,()=>{dpath(g,[bow,[(bow[0]+chain[0])/2,(bow[1]+chain[1])/2+12],[mix(bow[0],chain[0],drop),mix(bow[1],chain[1],drop)]],C.warm,2,true);dcircle(g,...chain,7,C.warm)});
   opacity(g,show(t,9.15),()=>{dpath(g,[chain,[chain[0]+40,chain[1]+30],[1100,chain[1]+30]],C.warm);dtext(g,'锚泊待命',1092,chain[1]+22,22,C.white,true,'right');dtext(g,'锚链示意 / 主机待命',1092,chain[1]+49,12,C.mut,false,'right');
     drect(g,42,119,214,119,'#0b1916de','#8ba18360');dtext(g,'MV MERIDIAN',55,144,14,C.hi,true);dtext(g,'240 m',55,181,29,C.white,true);dtext(g,'总长 / 船宽 36 m',55,206,13,C.mut);dtext(g,'抵达锚地 · 航行速度趋近零',55,225,12,C.mut);
   });
