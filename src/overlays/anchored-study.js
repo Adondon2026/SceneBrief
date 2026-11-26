@@ -24,7 +24,7 @@ export function drawAnchoredStudy(ctx,{time,start,end,anchor,paint,title,index,s
   ctx.strokeStyle='#82977a';ctx.lineWidth=.9;ctx.strokeRect(x+.5,y+.5,w-1,h-1);
   ctx.fillStyle='#c2d3a4';ctx.fillRect(x,y,3,43);
   ctx.save();ctx.beginPath();ctx.rect(x+1,y+1,w-2,h-2);ctx.clip();
-  ctx.translate(x,y);
+  ctx.translate(x,y);ctx.textAlign='left';ctx.textBaseline='alphabetic';
   ctx.fillStyle='#a6b89d';ctx.font='11px Consolas, monospace';ctx.fillText(index,13,19);
   ctx.fillStyle='#e1e7d6';ctx.font='600 20px Microsoft YaHei, Arial, sans-serif';ctx.fillText(title,13,43);
   ctx.strokeStyle='#91a58b45';ctx.beginPath();ctx.moveTo(13,54);ctx.lineTo(w-13,54);ctx.stroke();
