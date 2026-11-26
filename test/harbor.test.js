@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {D,local} from '../src/core/math.js';
+import {pathAt,tugAt,motion} from '../src/cases/harbor-approach/motion.js';
+import {harborCamera} from '../src/cases/harbor-approach/camera.js';
+import {studyVisibility} from '../src/overlays/anchored-study.js';
+import {TUG_STUDY} from '../src/cases/harbor-approach/tug-study.js';
+test('all trajectory and camera values finite',()=>{for(let i=0;i<=3000;i++){const t=i/100,s=pathAt(t);for(const v of [...Object.values(s),...Object.values(motion(t)),...Object.values(harborCamera(t,s,1280,720))])assert.ok(Number.isFinite(v));for(let k=0;k<2;k++){const o=tugAt(t,k);assert.ok([o.x,o.z,o.yaw].every(Number.isFinite));}}});
+test('tug contact centre stays on outboard side without overlap of model hull envelopes',()=>{for(let i=0;i<=3000;i++){const t=i/100,s=pathAt(t);for(let k=0;k<2;k++){const o=tugAt(t,k);if(!o.contact)continue;const dx=o.x-s.x,dz=o.z-s.z,bodyX=dx*Math.cos(s.yaw)-dz*Math.sin(s.yaw);assert.ok(bodyX>=33.64);const bow=local(o,0,0,15.5),bowX=(bow[0]-s.x)*Math.cos(s.yaw)-(bow[2]-s.z)*Math.sin(s.yaw);assert.ok(bowX>=18.14)}}});
+test('study visibility has bounded, seekable fades',()=>{const {start,end}=TUG_STUDY;assert.equal(studyVisibility(start,start,end),0);assert.equal(studyVisibility(end,start,end),0);assert.equal(studyVisibility((start+end)/2,start,end),1);for(let i=0;i<=3000;i++){const a=studyVisibility(i/100,start,end);assert.ok(a>=0&&a<=1)}});
+test('berthing final position and distance remain consistent',()=>{const s=pathAt(D),m=motion(D);assert.equal(s.yaw,0);assert.ok(Math.abs(m.fore)<1e-8&&Math.abs(m.aft)<1e-8);assert.ok(m.sway<.001)});
