@@ -9,13 +9,13 @@ import {fleetAt} from './cases/harbor-approach/dispatch-state.js';
 import {drawDispatchBrief} from './cases/harbor-approach/dispatch-brief.js';
 import {drawForceStudy,drawRangeStudy} from './cases/harbor-approach/operation-studies.js';
 'use strict';const $=x=>document.getElementById(x),stage=$('stage'),base=$('base'),ui=$('ui'),b=base.getContext('2d'),c=ui.getContext('2d');let W=1280,H=720,dpr=1,t=0,screenT=0,playing=false,started=false,last=performance.now(),idx=-1,muted=false,ready=false,T,renderer,world,camera,shipG,tugGs=[],water,threeObjects=[];const shots=[
-{a:0,z:4,code:'01 / APPROACH',title:'驶向 03 号泊位',note:'主船驶向泊位；T03 / T04 在外侧伴航与机动。'},
-{a:4,z:8,code:'02 / DECELERATION',title:'减速，建立平行船位',note:'主船继续减速；预留岸外水域供拖轮接应。'},
-{a:8,z:12,code:'03 / RENDEZVOUS',title:'拖轮接近与护舷接触',note:'拖轮沿艏向接近；减速后以橡胶护舷抵住主船外舷。'},
-{a:12,z:17,code:'04 / COORDINATION',title:'联合推靠，修正艏向',note:'艉部拖轮增推，使艉部向岸移动；两艘推靠拖轮协调横移。'},
-{a:17,z:22,code:'05 / FINAL APPROACH',title:'监测艏艉离岸距离',note:'船身趋于平行，逐步降低横移速度，接近码头护舷。'},
-{a:22,z:26,code:'06 / CONTACT',title:'最后数米：控制接触速度',note:'主船接近码头护舷，横移速度逐步趋近于零。'},
-{a:26,z:30,code:'07 / MOORING',title:'建立系泊，完成靠泊',note:'艏缆、艉缆与倒缆逐步带妥；拖轮卸载并撤离。'}];
+{a:0,z:4,code:'06 / APPROACH',title:'驶向 03 号泊位',note:'主船驶向泊位；T03 / T04 在外侧伴航与机动。'},
+{a:4,z:8,code:'07 / DECELERATION',title:'减速，建立平行船位',note:'主船继续减速；预留岸外水域供拖轮接应。'},
+{a:8,z:12,code:'08 / RENDEZVOUS',title:'拖轮接近与护舷接触',note:'拖轮沿艏向接近；减速后以橡胶护舷抵住主船外舷。'},
+{a:12,z:17,code:'09 / COORDINATION',title:'联合推靠，修正艏向',note:'艉部拖轮增推，使艉部向岸移动；两艘推靠拖轮协调横移。'},
+{a:17,z:22,code:'10 / FINAL APPROACH',title:'监测艏艉离岸距离',note:'船身趋于平行，逐步降低横移速度，接近码头护舷。'},
+{a:22,z:26,code:'11 / CONTACT',title:'最后数米：控制接触速度',note:'主船接近码头护舷，横移速度逐步趋近于零。'},
+{a:26,z:30,code:'12 / MOORING',title:'建立系泊，完成靠泊',note:'艏缆、艉缆及倒缆逐步带妥，推靠拖轮卸载，外侧拖轮解除待命。'}];
 function resize(){let r=stage.getBoundingClientRect();W=r.width;H=r.height;dpr=Math.min(devicePixelRatio||1,2);for(let cv of [base,ui]){cv.width=W*dpr;cv.height=H*dpr;cv.getContext('2d').setTransform(dpr,0,0,dpr,0,0)}if(renderer){renderer.setPixelRatio(dpr);renderer.setSize(W,H)}}addEventListener('resize',resize);resize();
 function line(g,x,y,X,Y,col='#a4b595',w=1){g.beginPath();g.moveTo(x,y);g.lineTo(X,Y);g.strokeStyle=col;g.lineWidth=w;g.stroke()}function poly(g,ps,fill,stroke,w=1){g.beginPath();ps.forEach((p,i)=>i?g.lineTo(...p):g.moveTo(...p));g.closePath();if(fill){g.fillStyle=fill;g.fill()}if(stroke){g.strokeStyle=stroke;g.lineWidth=w;g.stroke()}}function txt(g,s,x,y,size=12,col='#c5d0b7',font='Consolas, monospace',align='left',bold=false){g.font=`${bold?'600 ':''}${size}px ${font}`;g.fillStyle=col;g.textAlign=align;g.textBaseline='alphabetic';g.fillText(s,x,y)}function rect(g,x,y,w,h,fill,stroke){if(fill){g.fillStyle=fill;g.fillRect(x,y,w,h)}if(stroke){g.strokeStyle=stroke;g.lineWidth=1;g.strokeRect(x,y,w,h)}}function circle(g,x,y,r,col,w=1){g.beginPath();g.arc(x,y,r,0,Math.PI*2);g.strokeStyle=col;g.lineWidth=w;g.stroke()}function arrow(g,x,y,X,Y,col,w=1){line(g,x,y,X,Y,col,w);let a=Math.atan2(Y-y,X-x);poly(g,[[X,Y],[X-9*Math.cos(a-.4),Y-9*Math.sin(a-.4)],[X-9*Math.cos(a+.4),Y-9*Math.sin(a+.4)]],col)}
 function view(j,p,s,tugs,beat){
