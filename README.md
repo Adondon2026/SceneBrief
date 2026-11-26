@@ -42,3 +42,7 @@ V6 先提取相机、运动、几何、专题窗口、音频等职责；暂用 J
 V7 新增地球定位、锚泊状态、进港服务需求、四艘拖轮资源分配及会合路线。后半段保留连续三维运镜，增加推靠合力/力矩和艏艉岸距专题解析。调度四艘拖轮是本案的虚构设定：T01、T02 推靠，T03、T04 伴航和外侧待命；不是任何实际港口的强制配置。全部参数和港区均为演示数据，禁止用于实际航行与调度决策。
 
 全局地理轮廓来自 [Natural Earth 公共领域数据](https://www.naturalearthdata.com/about/terms-of-use/) 的简化陆地掩膜，不是卫星影像或航海图。配拖考虑因素参考 [新加坡海事及港务管理局 Towage](https://www.mpa.gov.sg/port-marine-ops/marine-services/pilotage-and-towage/towage)。
+
+## V8 Motion Lab / 连续动态构图实验
+
+[打开单文件预览的 GitHub 文件页](examples/harbor-approach/motion-lab-v8.html)，下载原始 HTML 后浏览器打开。18.5 秒，独立于 V7 的 90 秒完整版。开发模式运行 `npm run dev` 后访问 `/motion-lab.html`；导出运行 `npm run motion-lab`。旁白依赖设备上已安装的本地中文语音，未检测到时保留字幕，音效独立开关。
