@@ -50,3 +50,7 @@ V7 新增地球定位、锚泊状态、进港服务需求、四艘拖轮资源�
 ## V9：完整连续动态简报
 
 [完整 90 秒 HTML 预览](examples/harbor-approach/v9.html)（下载原始文件后直接打开）；[旁白时间轨 SRT](examples/harbor-approach/v9-narration.srt)。V9 完整版不调用浏览器或微软 TTS，仅保留字幕与原有事件音效。后续可按 SRT 制作外部语音素材。运行 `npm run standalone` 可重建 HTML 和 SRT。V7 与 V8 实验文件继续保留为对照。
+
+## Research Series 01
+
+[波浪中的控制能力](examples/wave-control/README.md)：基于近期学术讨论的独立90秒研究简报，保留港口案例不变。
