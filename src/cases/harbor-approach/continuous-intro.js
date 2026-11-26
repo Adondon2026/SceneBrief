@@ -4,7 +4,8 @@ import {globe,regional} from './dispatch-brief.js';
 import {ANCHOR,FLEET,dispatchTugAt,dispatchShipAt,sampledShipRoute,dispatchTiming} from './dispatch-state.js';
 import {LAB_DURATION,LAB_STARTS,LAB_FINAL,labCamera,labProject,labActive,drawLabWorld,drawLabDossiers} from './motion-lab.js';
 
-export const DISPATCH_START=18,DISPATCH_END=36.5;
+export const DISPATCH_START=18;
+export const DISPATCH_END=36.5;
 const C={hi:'#d0e7a1',white:'#e6ecda',mut:'#a4b69f',warm:'#d9b080',grid:'#93ae9140'};
 const startCamera=labCamera(0),endCamera=labCamera(LAB_DURATION);
 const preKeys=[
