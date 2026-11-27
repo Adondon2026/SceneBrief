@@ -19,6 +19,10 @@
 
 建议阅读 DESIGN → DIRECTING → WORKFLOW → QUALITY；Agent 先读 AGENTS。每个规则由责任文件维护，其他文件引用。
 
+## 声音资源
+
+[声音资产库](audio/README.md) · [音色索引](audio/catalog.json) · [原始程序合成试听台](audio/procedural/original-lab.html)。新任务必须优先复用用户筛选音色，第三方采样需要私有资产包，未确认组合不得冒充成熟预设。
+
 ## 制作主线
 
 证据研究 → 全局导演设计 → 资产规划 → 完整导演脚本（用户审批）→ 实际基准帧/核心动态实验 → Motion Lab（用户认可）→ 每批约20秒累计制作并回归 → 后期与终审 → 归档与复盘。声音与旁白从设计阶段规划；默认独立 SRT 与音轨，HTML 不内置旁白字幕。

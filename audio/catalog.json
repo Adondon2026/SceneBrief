@@ -1,0 +1,237 @@
+{
+  "version": 1,
+  "defaults": {
+    "weight": 1,
+    "pitchSemis": -12,
+    "reverb": 0.216,
+    "volume": 0.85
+  },
+  "procedural": [
+    {
+      "id": "G01",
+      "name": "窄带星地短报文",
+      "method": "playG01_ShortTelemetry",
+      "family": "data",
+      "renderSeconds": 2,
+      "availability": "public",
+      "status": "user-selected",
+      "source": "procedural/original-lab.html"
+    },
+    {
+      "id": "G08",
+      "name": "虚实边界测距回波",
+      "method": "playG08_BoundaryEcho",
+      "family": "probe",
+      "renderSeconds": 4,
+      "availability": "public",
+      "status": "user-selected",
+      "source": "procedural/original-lab.html"
+    },
+    {
+      "id": "G11",
+      "name": "声学信标定时滴答",
+      "method": "playG11_SonarBeaconTick",
+      "family": "timing",
+      "renderSeconds": 2,
+      "availability": "public",
+      "status": "user-selected",
+      "source": "procedural/original-lab.html"
+    },
+    {
+      "id": "G16",
+      "name": "航速超限低频警示",
+      "method": "playG16_SpeedThresholdWarn",
+      "family": "warning",
+      "renderSeconds": 2,
+      "availability": "public",
+      "status": "user-selected",
+      "source": "procedural/original-lab.html"
+    },
+    {
+      "id": "G17",
+      "name": "可航边界越界零分否决",
+      "method": "playG17_VetoLowStinger",
+      "family": "warning",
+      "renderSeconds": 3,
+      "availability": "public",
+      "status": "user-selected",
+      "source": "procedural/original-lab.html"
+    },
+    {
+      "id": "11",
+      "name": "卫星遥测数据包",
+      "method": "play11_SatelliteTelemetry",
+      "family": "data",
+      "renderSeconds": 2,
+      "availability": "public",
+      "status": "user-selected",
+      "source": "procedural/original-lab.html"
+    },
+    {
+      "id": "17",
+      "name": "深空声呐/海底地形测绘",
+      "method": "play17_DeepSonar",
+      "family": "probe",
+      "renderSeconds": 4,
+      "availability": "public",
+      "status": "user-selected",
+      "source": "procedural/original-lab.html"
+    },
+    {
+      "id": "24",
+      "name": "威胁等级提升警报",
+      "method": "play24_ThreatStinger",
+      "family": "warning",
+      "renderSeconds": 3,
+      "availability": "public",
+      "status": "user-selected",
+      "source": "procedural/original-lab.html"
+    }
+  ],
+  "samples": [
+    {
+      "id": "A04",
+      "start": 6.74,
+      "end": 7.14,
+      "source": "A",
+      "path": "samples/A04.wav",
+      "availability": "private-asset-pack-required",
+      "status": "user-selected",
+      "redistribution": "unverified"
+    },
+    {
+      "id": "A09",
+      "start": 12.83,
+      "end": 14.33,
+      "source": "A",
+      "path": "samples/A09.wav",
+      "availability": "private-asset-pack-required",
+      "status": "user-selected",
+      "redistribution": "unverified"
+    },
+    {
+      "id": "A11",
+      "start": 15.78,
+      "end": 16.84,
+      "source": "A",
+      "path": "samples/A11.wav",
+      "availability": "private-asset-pack-required",
+      "status": "user-selected",
+      "redistribution": "unverified"
+    },
+    {
+      "id": "A12",
+      "start": 17.23,
+      "end": 18.77,
+      "source": "A",
+      "path": "samples/A12.wav",
+      "availability": "private-asset-pack-required",
+      "status": "user-selected",
+      "redistribution": "unverified"
+    },
+    {
+      "id": "A18",
+      "start": 29.99,
+      "end": 31.84,
+      "source": "A",
+      "path": "samples/A18.wav",
+      "availability": "private-asset-pack-required",
+      "status": "user-selected",
+      "redistribution": "unverified"
+    },
+    {
+      "id": "A21",
+      "start": 35.56,
+      "end": 37.37,
+      "source": "A",
+      "path": "samples/A21.wav",
+      "availability": "private-asset-pack-required",
+      "status": "user-selected",
+      "redistribution": "unverified"
+    },
+    {
+      "id": "A29",
+      "start": 55.2,
+      "end": 56.27,
+      "source": "A",
+      "path": "samples/A29.wav",
+      "availability": "private-asset-pack-required",
+      "status": "user-selected",
+      "redistribution": "unverified"
+    },
+    {
+      "id": "B03",
+      "start": 2.48,
+      "end": 3.45,
+      "source": "B",
+      "path": "samples/B03.wav",
+      "availability": "private-asset-pack-required",
+      "status": "user-selected-needs-boundary-review",
+      "redistribution": "unverified"
+    },
+    {
+      "id": "B04",
+      "start": 3.45,
+      "end": 4.38,
+      "source": "B",
+      "path": "samples/B04.wav",
+      "availability": "private-asset-pack-required",
+      "status": "user-selected-needs-boundary-review",
+      "redistribution": "unverified"
+    },
+    {
+      "id": "B05",
+      "start": 4.38,
+      "end": 5.48,
+      "source": "B",
+      "path": "samples/B05.wav",
+      "availability": "private-asset-pack-required",
+      "status": "user-selected-needs-boundary-review",
+      "redistribution": "unverified"
+    },
+    {
+      "id": "B06",
+      "start": 5.48,
+      "end": 6.43,
+      "source": "B",
+      "path": "samples/B06.wav",
+      "availability": "private-asset-pack-required",
+      "status": "user-selected-needs-boundary-review",
+      "redistribution": "unverified"
+    },
+    {
+      "id": "B07",
+      "start": 6.43,
+      "end": 7.47,
+      "source": "B",
+      "path": "samples/B07.wav",
+      "availability": "private-asset-pack-required",
+      "status": "user-selected-needs-boundary-review",
+      "redistribution": "unverified"
+    },
+    {
+      "id": "B08",
+      "start": 7.47,
+      "end": 8.25,
+      "source": "B",
+      "path": "samples/B08.wav",
+      "availability": "private-asset-pack-required",
+      "status": "user-selected-needs-boundary-review",
+      "redistribution": "unverified"
+    },
+    {
+      "id": "B09",
+      "start": 8.25,
+      "end": 10,
+      "source": "B",
+      "path": "samples/B09.wav",
+      "availability": "private-asset-pack-required",
+      "status": "user-selected-needs-boundary-review",
+      "redistribution": "unverified"
+    }
+  ],
+  "presets": {
+    "status": "not-yet-audition-approved",
+    "items": []
+  }
+}

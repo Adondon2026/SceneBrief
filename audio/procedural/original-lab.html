@@ -1,0 +1,1646 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Web Audio 科幻/战术科技音色实验室 (工业重质感 + 评论版)</title>
+<style>
+  :root {
+    --bg: #070a0e;
+    --panel: #0c1218;
+    --panel-hover: #121c25;
+    --edge: #1e2d3a;
+    --edge-bright: #345269;
+    --cyan: #5cc8ff;
+    --cyan-glow: rgba(92, 200, 255, 0.22);
+    --amber: #e5a95c;
+    --amber-glow: rgba(229, 169, 92, 0.22);
+    --red: #f06464;
+    --green: #5ce6a0;
+    --text: #e6edf3;
+    --muted: #7d92a4;
+    --dim: #465868;
+    --mono: "Consolas", "SFMono-Regular", "Liberation Mono", Menlo, monospace;
+    --sans: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", system-ui, sans-serif;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    min-height: 100%;
+    background-color: var(--bg);
+    background-image:
+      linear-gradient(rgba(92, 200, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(92, 200, 255, 0.03) 1px, transparent 1px);
+    background-size: 32px 32px;
+    color: var(--text);
+    font-family: var(--sans);
+  }
+
+  /* 顶部指挥台与示波器 */
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(7, 10, 14, 0.95);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--edge);
+    padding: 14px 24px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65);
+  }
+
+  .header-inner {
+    max-width: 1440px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 16px;
+    align-items: center;
+  }
+
+  .title-block {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .sys-tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: var(--cyan);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .sys-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--cyan);
+    box-shadow: 0 0 8px var(--cyan);
+  }
+
+  h1 {
+    margin: 0;
+    font-size: clamp(18px, 2.1vw, 23px);
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: #ffffff;
+  }
+
+  .subtitle {
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  /* 控制控件区 */
+  .controls-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .slider-group {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    background: var(--panel);
+    border: 1px solid var(--edge);
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .slider-group.highlight-ctrl {
+    border-color: rgba(229, 169, 92, 0.45);
+    background: rgba(229, 169, 92, 0.06);
+  }
+
+  .slider-group input[type="range"] {
+    width: 76px;
+    accent-color: var(--cyan);
+    cursor: pointer;
+  }
+
+  .slider-group.highlight-ctrl input[type="range"] {
+    accent-color: var(--amber);
+  }
+
+  .slider-val {
+    color: var(--text);
+    min-width: 38px;
+    text-align: right;
+  }
+
+  button {
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 8px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--edge-bright);
+    background: var(--panel);
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.14s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  button:hover {
+    background: var(--panel-hover);
+    border-color: var(--cyan);
+    color: #fff;
+  }
+
+  button:active {
+    transform: scale(0.97);
+  }
+
+  button.primary {
+    border-color: var(--cyan);
+    background: rgba(92, 200, 255, 0.14);
+    color: var(--cyan);
+  }
+
+  button.primary:hover {
+    background: var(--cyan);
+    color: #05080c;
+  }
+
+  button.amber-btn {
+    border-color: var(--amber);
+    background: rgba(229, 169, 92, 0.14);
+    color: var(--amber);
+  }
+
+  button.amber-btn:hover {
+    background: var(--amber);
+    color: #05080c;
+  }
+
+  button.danger {
+    border-color: var(--red);
+    background: rgba(240, 100, 100, 0.14);
+    color: var(--red);
+  }
+
+  button.danger:hover {
+    background: var(--red);
+    color: #05080c;
+  }
+
+  /* 实时示波器与频谱仪画布 */
+  .visualizer-wrap {
+    max-width: 1440px;
+    margin: 10px auto 0;
+    position: relative;
+    height: 68px;
+    background: #05080b;
+    border: 1px solid var(--edge);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  #scope {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  .scope-hud {
+    position: absolute;
+    inset: 6px 12px;
+    pointer-events: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+  }
+
+  #now-playing {
+    color: var(--amber);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+  }
+
+  /* 主内容网格 */
+  main {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 20px 24px 60px;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+  }
+
+  .category-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .category-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--edge);
+    padding-bottom: 6px;
+  }
+
+  .category-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .category-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--amber);
+    background: rgba(229, 169, 92, 0.12);
+    border: 1px solid rgba(229, 169, 92, 0.35);
+    padding: 2px 7px;
+    border-radius: 4px;
+  }
+
+  .category-sub {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--dim);
+  }
+
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(315px, 1fr));
+    gap: 14px;
+  }
+
+  /* 音色触发卡片 */
+  .sound-card {
+    position: relative;
+    background: var(--panel);
+    border: 1px solid var(--edge);
+    border-radius: 8px;
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: transform 0.12s ease, border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .sound-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 3px;
+    height: 100%;
+    border-top-left-radius: 8px;
+    border-bottom-left-radius: 8px;
+    background: var(--edge-bright);
+    transition: background 0.16s ease;
+  }
+
+  .sound-card:hover {
+    background: var(--panel-hover);
+    border-color: var(--edge-bright);
+    transform: translateY(-1px);
+  }
+
+  .sound-card:hover::before {
+    background: var(--cyan);
+  }
+
+  .sound-card.active {
+    border-color: var(--cyan);
+    background: #13222e;
+    box-shadow: 0 0 24px var(--cyan-glow);
+  }
+
+  .sound-card.active::before {
+    background: var(--amber);
+  }
+
+  .sound-card.has-note {
+    border-color: rgba(229, 169, 92, 0.55);
+  }
+
+  .card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .card-id {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--cyan);
+    font-weight: 700;
+  }
+
+  .dsp-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--amber);
+    background: rgba(229, 169, 92, 0.09);
+    border: 1px solid rgba(229, 169, 92, 0.25);
+    padding: 2px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+
+  .card-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: #f4f8fb;
+    margin: 2px 0 4px;
+  }
+
+  .card-desc {
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--muted);
+  }
+
+  /* 卡片内评论输入框 */
+  .comment-box {
+    width: 100%;
+    background: #06090c;
+    border: 1px solid #243544;
+    border-radius: 5px;
+    padding: 7px 9px;
+    color: #f0f6fc;
+    font-family: var(--sans);
+    font-size: 12px;
+    resize: vertical;
+    min-height: 44px;
+    outline: none;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+
+  .comment-box::placeholder {
+    color: #4f6475;
+  }
+
+  .comment-box:focus {
+    border-color: var(--amber);
+    background: #090e14;
+  }
+
+  .card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 8px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.06);
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--dim);
+  }
+
+  .play-pill {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--cyan);
+    background: rgba(92, 200, 255, 0.1);
+    border: 1px solid rgba(92, 200, 255, 0.3);
+    padding: 3px 10px;
+    border-radius: 4px;
+    transition: all 0.12s ease;
+  }
+
+  .sound-card:hover .play-pill,
+  .sound-card.active .play-pill {
+    background: var(--cyan);
+    color: #05080c;
+  }
+
+  /* 顶部总评抽屉 */
+  .global-notes-bar {
+    max-width: 1440px;
+    margin: 10px auto 0;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  #global-note {
+    flex: 1;
+    background: #080d12;
+    border: 1px solid var(--edge-bright);
+    border-radius: 6px;
+    padding: 7px 12px;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 12px;
+    outline: none;
+  }
+
+  #global-note:focus {
+    border-color: var(--amber);
+  }
+
+  /* 底部复制反馈弹窗提示 */
+  #toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 100;
+    background: #10241c;
+    border: 1px solid var(--green);
+    color: var(--green);
+    padding: 10px 18px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+    opacity: 0;
+    transform: translateY(10px);
+    pointer-events: none;
+    transition: all 0.2s ease;
+  }
+
+  #toast.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  @media (max-width: 960px) {
+    .header-inner {
+      grid-template-columns: 1fr;
+    }
+    header {
+      padding: 12px 16px;
+    }
+    main {
+      padding: 16px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="title-block">
+      <div class="sys-tag"><span class="sys-dot"></span>WEB AUDIO DSP LAB // EXTRACTED & GENERALIZED GENOME</div>
+      <h1>中选特征泛化音色库 (100% 重量 · -12 st 定制衍生版)</h1>
+      <div class="subtitle">基于 #11 / #12 / #13 / #17 / #24 声学特征泛化出的 18 种同家族新音色 · 默认锁定 100% 工业重量与最低音调</div>
+    </div>
+
+    <div class="controls-bar">
+      <div class="slider-group highlight-ctrl" title="增加中低频金属机身共振，削弱高频塑料毛刺">
+        <span>工业重量</span>
+        <input id="weight-ctrl" type="range" min="0" max="1" step="0.01" value="1">
+        <span id="weight-val" class="slider-val">100%</span>
+      </div>
+
+      <div class="slider-group highlight-ctrl" title="全局音高偏置（负值更沉稳、重金属）">
+        <span>音调偏置</span>
+        <input id="pitch-ctrl" type="range" min="-12" max="6" step="1" value="-12">
+        <span id="pitch-val" class="slider-val">-12 st</span>
+      </div>
+
+      <div class="slider-group" title="立体声空间反射混响">
+        <span>空间混响</span>
+        <input id="reverb-send" type="range" min="0" max="0.8" step="0.01" value="0.22">
+        <span id="reverb-val" class="slider-val">28%</span>
+      </div>
+
+      <div class="slider-group" title="主输出音量">
+        <span>主音量</span>
+        <input id="master-vol" type="range" min="0" max="1" step="0.01" value="0.85">
+        <span id="master-val" class="slider-val">85%</span>
+      </div>
+
+      <button id="btn-audition" class="primary">▶ 连续试听 (18)</button>
+      <button id="btn-stop" class="danger" style="display:none;">■ 停止</button>
+      <button id="btn-copy-report" class="amber-btn">📋 复制全部评论报告</button>
+    </div>
+  </div>
+
+  <div class="global-notes-bar">
+    <input id="global-note" type="text" placeholder="整体总评备注（例如：整体需要更沉稳的金属阻尼感，01号适合资料卡展开，07号适合锁定...）">
+  </div>
+
+  <div class="visualizer-wrap">
+    <canvas id="scope"></canvas>
+    <div class="scope-hud">
+      <span>REAL-TIME OSCILLOSCOPE + HARMONIC SPECTRUM (FFT 2048)</span>
+      <span id="now-playing">STANDBY // 点击下方任意音色卡片试听，在文本框输入你的评价</span>
+    </div>
+  </div>
+</header>
+
+<main id="lab-root"></main>
+<div id="toast">✓ 已复制全部音色评论报告，可直接粘贴发给我！</div>
+
+<script type="module">
+const $ = id => document.getElementById(id);
+
+// ============================================================================
+// 1. 高精度 Web Audio 科幻/战术 DSP 合成引擎 (含工业重量总线 & 实时变调)
+// ============================================================================
+class SciFiDspEngine {
+  constructor() {
+    this.ctx = null;
+    this.masterGain = null;
+    this.dryBus = null;
+    this.bodyShelf = null;   // 中低频金属机身共振增益 (190Hz)
+    this.plasticCut = null;  // 削去轻飘塑料感的带阻/高频衰减 (4.2kHz)
+    this.reverbNode = null;
+    this.reverbGain = null;
+    this.compressor = null;
+    this.analyser = null;
+    this.noiseBuf = null;
+    this.pinkBuf = null;
+
+    this.vol = 0.85;
+    this.rev = 0.22;
+    this.weight = 1.0;       // 默认锁定 100% 工业重量
+    this.pitchSemis = -12;   // 默认锁定最低音调 -12 st
+  }
+
+  // 计算全局频率倍率（半音转倍率）
+  f(baseFreq) {
+    return baseFreq * Math.pow(2, this.pitchSemis / 12);
+  }
+
+  // 初始化 Web Audio 主总线与工业重质感滤波链
+  init() {
+    if (!this.ctx) {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      this.ctx = new AudioCtx();
+
+      // 预生成白噪声与粉红噪声缓冲
+      const sr = this.ctx.sampleRate;
+      this.noiseBuf = this.ctx.createBuffer(1, sr * 2, sr);
+      this.pinkBuf = this.ctx.createBuffer(1, sr * 2, sr);
+      const nData = this.noiseBuf.getChannelData(0);
+      const pData = this.pinkBuf.getChannelData(0);
+      let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+
+      for (let i = 0; i < sr * 2; i++) {
+        const w = Math.random() * 2 - 1;
+        nData[i] = w;
+        b0 = 0.99886 * b0 + w * 0.0555179;
+        b1 = 0.99332 * b1 + w * 0.0750759;
+        b2 = 0.96900 * b2 + w * 0.1538520;
+        b3 = 0.86650 * b3 + w * 0.3104856;
+        b4 = 0.55000 * b4 + w * 0.5329522;
+        b5 = -0.7616 * b5 - w * 0.0168980;
+        pData[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + w * 0.5362) * 0.05;
+        b6 = w * 0.115926;
+      }
+
+      this.dryBus = this.ctx.createGain();
+      this.dryBus.gain.setValueAtTime(1.0, this.ctx.currentTime);
+
+      // 工业重量链：增强 185Hz 金属腔体厚重感 + 适度削去 4.2kHz 轻飘塑料感
+      this.bodyShelf = this.ctx.createBiquadFilter();
+      this.bodyShelf.type = 'lowshelf';
+      this.bodyShelf.frequency.setValueAtTime(185, this.ctx.currentTime);
+
+      this.plasticCut = this.ctx.createBiquadFilter();
+      this.plasticCut.type = 'highshelf';
+      this.plasticCut.frequency.setValueAtTime(4200, this.ctx.currentTime);
+
+      // 合成立体声空间混响脉冲响应
+      const revLen = Math.floor(sr * 1.15);
+      const irBuf = this.ctx.createBuffer(2, revLen, sr);
+      for (let ch = 0; ch < 2; ch++) {
+        const chData = irBuf.getChannelData(ch);
+        for (let i = 0; i < revLen; i++) {
+          const decay = Math.pow(1 - i / revLen, 2.4);
+          chData[i] = (Math.random() * 2 - 1) * decay * 0.32;
+        }
+      }
+      this.reverbNode = this.ctx.createConvolver();
+      this.reverbNode.buffer = irBuf;
+
+      const revLp = this.ctx.createBiquadFilter();
+      revLp.type = 'lowpass';
+      revLp.frequency.setValueAtTime(2200, this.ctx.currentTime);
+
+      this.reverbGain = this.ctx.createGain();
+      this.reverbGain.gain.setValueAtTime(this.rev, this.ctx.currentTime);
+
+      this.compressor = this.ctx.createDynamicsCompressor();
+      this.compressor.threshold.setValueAtTime(-14, this.ctx.currentTime);
+      this.compressor.knee.setValueAtTime(18, this.ctx.currentTime);
+      this.compressor.ratio.setValueAtTime(4, this.ctx.currentTime);
+      this.compressor.attack.setValueAtTime(0.005, this.ctx.currentTime);
+      this.compressor.release.setValueAtTime(0.14, this.ctx.currentTime);
+
+      this.analyser = this.ctx.createAnalyser();
+      this.analyser.fftSize = 2048;
+
+      this.masterGain = this.ctx.createGain();
+      this.masterGain.gain.setValueAtTime(this.vol, this.ctx.currentTime);
+
+      this.dryBus.connect(this.bodyShelf);
+      this.dryBus.connect(this.reverbNode);
+      this.reverbNode.connect(revLp);
+      revLp.connect(this.reverbGain);
+      this.reverbGain.connect(this.bodyShelf);
+
+      this.bodyShelf.connect(this.plasticCut);
+      this.plasticCut.connect(this.compressor);
+      this.compressor.connect(this.analyser);
+      this.analyser.connect(this.masterGain);
+      this.masterGain.connect(this.ctx.destination);
+
+      this.applyWeight();
+    }
+
+    if (this.ctx.state === 'suspended') {
+      this.ctx.resume();
+    }
+  }
+
+  applyWeight() {
+    if (!this.ctx || !this.bodyShelf || !this.plasticCut) return;
+    const now = this.ctx.currentTime;
+    this.bodyShelf.gain.setTargetAtTime(this.weight * 8.5, now, 0.03);
+    this.plasticCut.gain.setTargetAtTime(-this.weight * 7.5, now, 0.03);
+  }
+
+  setWeight(w) {
+    this.weight = w;
+    this.init();
+    this.applyWeight();
+  }
+
+  setPitch(semis) {
+    this.pitchSemis = semis;
+    this.init();
+  }
+
+  setVolume(v) {
+    this.vol = v;
+    if (this.masterGain && this.ctx) {
+      this.masterGain.gain.setTargetAtTime(v, this.ctx.currentTime, 0.02);
+    }
+  }
+
+  setReverb(r) {
+    this.rev = r;
+    if (this.reverbGain && this.ctx) {
+      this.reverbGain.gain.setTargetAtTime(r, this.ctx.currentTime, 0.03);
+    }
+  }
+
+  // 注入工业机身低频分量，增强重量感
+  injectChassisMass(time, intensity = 1.0) {
+    if (!this.ctx || !this.dryBus || this.weight <= 0.01) return;
+    const osc = this.ctx.createOscillator();
+    const lp = this.ctx.createBiquadFilter();
+    const g = this.ctx.createGain();
+    osc.type = 'sine';
+    const startF = this.f(125);
+    osc.frequency.setValueAtTime(startF, time);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(28, startF * 0.36), time + 0.14);
+
+    lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(220, time);
+
+    const amp = 0.24 * this.weight * intensity;
+    g.gain.setValueAtTime(0.0001, time);
+    g.gain.linearRampToValueAtTime(amp, time + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, time + 0.16);
+
+    osc.connect(lp);
+    lp.connect(g);
+    g.connect(this.dryBus);
+    osc.start(time);
+    osc.stop(time + 0.18);
+  }
+
+  // 11. 卫星遥测数据包 (母版)
+  play11_SatelliteTelemetry() {
+    this.init();
+    const now = this.ctx.currentTime;
+    this.injectChassisMass(now, 0.85);
+    const bits = [1, 0, 1, 1, 0, 1, 0, 0, 1, 1];
+    const osc = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    osc.type = 'sine';
+    const step = 0.021;
+    bits.forEach((b, i) => {
+      osc.frequency.setValueAtTime(this.f(b ? 2100 : 1550), now + i * step);
+    });
+    const dur = bits.length * step;
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.linearRampToValueAtTime(0.15, now + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + dur + 0.02);
+    osc.connect(g);
+    g.connect(this.dryBus);
+    osc.start(now);
+    osc.stop(now + dur + 0.03);
+  }
+
+  // 12. 生物特征/虹膜验证通过 (母版)
+  play12_BiometricVerified() {
+    this.init();
+    const now = this.ctx.currentTime;
+    this.injectChassisMass(now, 0.9);
+    [587.33, 880.0].forEach((rawF, idx) => {
+      const t0 = now + idx * 0.08;
+      const dur = 0.36;
+      const osc = this.ctx.createOscillator();
+      const lp = this.ctx.createBiquadFilter();
+      const g = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(this.f(rawF), t0);
+      lp.type = 'lowpass';
+      lp.frequency.setValueAtTime(this.f(2100), t0);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.linearRampToValueAtTime(0.17, t0 + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      osc.connect(lp);
+      lp.connect(g);
+      g.connect(this.dryBus);
+      osc.start(t0);
+      osc.stop(t0 + dur + 0.03);
+    });
+  }
+
+  // 13. 相控阵雷达脉冲 (母版)
+  play13_PhasedRadar() {
+    this.init();
+    const now = this.ctx.currentTime;
+    const dur = 0.62;
+    this.injectChassisMass(now, 0.95);
+    const osc = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    const delay = this.ctx.createDelay();
+    const fb = this.ctx.createGain();
+
+    osc.type = 'sine';
+    const base = this.f(932.33);
+    osc.frequency.setValueAtTime(base, now);
+    osc.frequency.exponentialRampToValueAtTime(base * 0.96, now + dur);
+
+    delay.delayTime.setValueAtTime(0.095, now);
+    fb.gain.setValueAtTime(0.42, now);
+
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.linearRampToValueAtTime(0.18, now + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+
+    osc.connect(g);
+    g.connect(this.dryBus);
+    g.connect(delay);
+    delay.connect(fb);
+    fb.connect(delay);
+    delay.connect(this.dryBus);
+
+    osc.start(now);
+    osc.stop(now + dur + 0.05);
+  }
+
+  // 17. 深空声呐/海底地形测绘 (母版)
+  play17_DeepSonar() {
+    this.init();
+    const now = this.ctx.currentTime;
+    const dur = 1.25;
+    this.injectChassisMass(now, 1.0);
+    const osc = this.ctx.createOscillator();
+    const lp = this.ctx.createBiquadFilter();
+    const g = this.ctx.createGain();
+    const delay = this.ctx.createDelay();
+    const fb = this.ctx.createGain();
+
+    osc.type = 'sine';
+    const base = this.f(523.25);
+    osc.frequency.setValueAtTime(base, now);
+    osc.frequency.exponentialRampToValueAtTime(base * 0.975, now + dur);
+
+    lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(1400, now);
+
+    delay.delayTime.setValueAtTime(0.16, now);
+    fb.gain.setValueAtTime(0.48, now);
+
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.linearRampToValueAtTime(0.2, now + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+
+    osc.connect(lp);
+    lp.connect(g);
+    g.connect(this.dryBus);
+    g.connect(delay);
+    delay.connect(fb);
+    fb.connect(delay);
+    delay.connect(this.dryBus);
+
+    osc.start(now);
+    osc.stop(now + dur + 0.08);
+  }
+
+  // 24. 威胁等级提升警报 (母版)
+  play24_ThreatStinger() {
+    this.init();
+    const now = this.ctx.currentTime;
+    const dur = 0.88;
+
+    [65.41, 98.0, 130.81].forEach((rawF, idx) => {
+      const f = this.f(rawF);
+      const osc = this.ctx.createOscillator();
+      const lp = this.ctx.createBiquadFilter();
+      const g = this.ctx.createGain();
+
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(f, now);
+
+      lp.type = 'lowpass';
+      lp.frequency.setValueAtTime(this.f(200), now);
+      lp.frequency.exponentialRampToValueAtTime(this.f(980), now + 0.12);
+      lp.frequency.exponentialRampToValueAtTime(this.f(220), now + dur);
+
+      const peak = idx === 0 ? 0.22 : 0.12;
+      g.gain.setValueAtTime(0.0001, now);
+      g.gain.linearRampToValueAtTime(peak, now + 0.025);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+
+      osc.connect(lp);
+      lp.connect(g);
+      g.connect(this.dryBus);
+      osc.start(now);
+      osc.stop(now + dur + 0.04);
+    });
+  }
+
+  // ==========================================================================
+  // 基于 #11 / #12 / #13 / #17 / #24 声学特征泛化出的 18 种衍生音色 (G01 - G18)
+  // ==========================================================================
+
+  // G01. 窄带星地短报文 (#11 极简短促版：适合小标签/字幕出现)
+  playG01_ShortTelemetry() {
+    this.init();
+    const now = this.ctx.currentTime;
+    this.injectChassisMass(now, 0.7);
+    const bits = [1, 0, 1, 1, 0, 1];
+    const osc = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    osc.type = 'sine';
+    const step = 0.018;
+    bits.forEach((b, i) => osc.frequency.setValueAtTime(this.f(b ? 2160 : 1620), now + i * step));
+    const dur = bits.length * step;
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.linearRampToValueAtTime(0.14, now + 0.006);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + dur + 0.02);
+    osc.connect(g);
+    g.connect(this.dryBus);
+    osc.start(now);
+    osc.stop(now + dur + 0.03);
+  }
+
+  // G02. 硬件域控握手报文 (#11 + 金属底座双帧流：适合 AGX Orin 连线)
+  playG02_ControllerHandshake() {
+    this.init();
+    const now = this.ctx.currentTime;
+    [0, 0.14].forEach((off, block) => {
+      const t0 = now + off;
+      this.injectChassisMass(t0, block === 0 ? 0.8 : 1.0);
+      const bits = block === 0 ? [0, 1, 0, 1, 1] : [1, 0, 1, 1, 1, 0];
+      const osc = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      osc.type = 'triangle';
+      const step = 0.016;
+      bits.forEach((b, i) => osc.frequency.setValueAtTime(this.f(b ? (block ? 2400 : 1920) : 1440), t0 + i * step));
+      const dur = bits.length * step;
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.linearRampToValueAtTime(0.13, t0 + 0.006);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur + 0.02);
+      osc.connect(g);
+      g.connect(this.dryBus);
+      osc.start(t0);
+      osc.stop(t0 + dur + 0.03);
+    });
+  }
+
+  // G03. 坐标矩阵逐行写入 (#11 阶梯上行遥测：适合表格/参数面板展开)
+  playG03_MatrixTelemetry() {
+    this.init();
+    const now = this.ctx.currentTime;
+    this.injectChassisMass(now, 0.85);
+    const freqs = [1100, 1320, 1485, 1650, 1980, 2200];
+    freqs.forEach((rawF, i) => {
+      const t0 = now + i * 0.034;
+      const osc = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(this.f(rawF), t0);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.linearRampToValueAtTime(0.12, t0 + 0.005);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.045);
+      osc.connect(g);
+      g.connect(this.dryBus);
+      osc.start(t0);
+      osc.stop(t0 + 0.05);
+    });
+  }
+
+  // G04. 水声调制解调器回传 (#11 + #17 融合：水下信道遥测波)
+  playG04_AcousticModem() {
+    this.init();
+    const now = this.ctx.currentTime;
+    this.injectChassisMass(now, 0.9);
+    const seq = [1200, 1600, 1200, 1800, 2400, 1800, 2400];
+    const osc = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    const delay = this.ctx.createDelay();
+    const fb = this.ctx.createGain();
+    osc.type = 'sine';
+    seq.forEach((f, i) => osc.frequency.setValueAtTime(this.f(f), now + i * 0.028));
+    const dur = seq.length * 0.028;
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.linearRampToValueAtTime(0.14, now + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + dur + 0.12);
+    delay.delayTime.setValueAtTime(0.065, now);
+    fb.gain.setValueAtTime(0.35, now);
+    osc.connect(g);
+    g.connect(this.dryBus);
+    g.connect(delay);
+    delay.connect(fb);
+    fb.connect(delay);
+    delay.connect(this.dryBus);
+    osc.start(now);
+    osc.stop(now + dur + 0.25);
+  }
+
+  // G05. 航行日志封包归档 (#11 下行收束遥测：适合测试结束上传日志)
+  playG05_PacketArchive() {
+    this.init();
+    const now = this.ctx.currentTime;
+    const seq = [2200, 1760, 1485, 1100, 880];
+    seq.forEach((rawF, i) => {
+      const t0 = now + i * 0.036;
+      const osc = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(this.f(rawF), t0);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.linearRampToValueAtTime(0.13, t0 + 0.006);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.07);
+      osc.connect(g);
+      g.connect(this.dryBus);
+      osc.start(t0);
+      osc.stop(t0 + 0.08);
+    });
+    this.injectChassisMass(now + 0.144, 1.0);
+  }
+
+  // G06. 十二任务算术平均汇总 (#11 + #12 复合：多任务聚合计算完成)
+  playG06_TaskAggregation() {
+    this.init();
+    const now = this.ctx.currentTime;
+    const notes = [880, 1100, 1320, 1760];
+    notes.forEach((rawF, i) => {
+      const t0 = now + i * 0.042;
+      const dur = i === 3 ? 0.42 : 0.08;
+      const osc = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(this.f(rawF), t0);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.linearRampToValueAtTime(i === 3 ? 0.16 : 0.11, t0 + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      osc.connect(g);
+      g.connect(this.dryBus);
+      osc.start(t0);
+      osc.stop(t0 + dur + 0.02);
+    });
+    this.injectChassisMass(now + 0.126, 1.1);
+  }
+
+  // G07. 舰载相控阵近距扫描 (#13 紧凑双脉冲：适合虚拟交通船只检出)
+  playG07_CloseArrayPing() {
+    this.init();
+    const now = this.ctx.currentTime;
+    [0, 0.09].forEach((off, idx) => {
+      const t0 = now + off;
+      this.injectChassisMass(t0, idx === 0 ? 0.7 : 0.95);
+      const osc = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      osc.type = 'sine';
+      const f = this.f(idx === 0 ? 1046.5 : 1318.5);
+      osc.frequency.setValueAtTime(f, t0);
+      osc.frequency.exponentialRampToValueAtTime(f * 0.97, t0 + 0.34);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.linearRampToValueAtTime(idx === 0 ? 0.13 : 0.17, t0 + 0.005);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.34);
+      osc.connect(g);
+      g.connect(this.dryBus);
+      osc.start(t0);
+      osc.stop(t0 + 0.36);
+    });
+  }
+
+  // G08. 虚实边界测距回波 (#13 + #17 长尾波导反射：适合航道边界线高亮)
+  playG08_BoundaryEcho() {
+    this.init();
+    const now = this.ctx.currentTime;
+    const dur = 0.95;
+    this.injectChassisMass(now, 0.9);
+    const osc = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    osc.type = 'sine';
+    const base = this.f(784);
+    osc.frequency.setValueAtTime(base, now);
+    osc.frequency.exponentialRampToValueAtTime(base * 0.95, now + dur);
+
+    const delay = this.ctx.createDelay();
+    delay.delayTime.setValueAtTime(0.11, now);
+    const fb = this.ctx.createGain();
+    fb.gain.setValueAtTime(0.52, now);
+
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.linearRampToValueAtTime(0.18, now + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+
+    osc.connect(g);
+    g.connect(this.dryBus);
+    g.connect(delay);
+    delay.connect(fb);
+    fb.connect(delay);
+    delay.connect(this.dryBus);
+    osc.start(now);
+    osc.stop(now + dur + 0.1);
+  }
+
+  // G09. 深水声呐双频探测 (#17 八度谐波加强版：更厚重的舰船吃水/地形探测)
+  playG09_DualBathymetry() {
+    this.init();
+    const now = this.ctx.currentTime;
+    const dur = 1.35;
+    this.injectChassisMass(now, 1.0);
+    [440, 880].forEach((rawF, idx) => {
+      const osc = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      osc.type = 'sine';
+      const base = this.f(rawF);
+      osc.frequency.setValueAtTime(base, now);
+      osc.frequency.exponentialRampToValueAtTime(base * 0.985, now + dur);
+      g.gain.setValueAtTime(0.0001, now);
+      g.gain.linearRampToValueAtTime(idx === 0 ? 0.19 : 0.09, now + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+      osc.connect(g);
+      g.connect(this.dryBus);
+      osc.start(now);
+      osc.stop(now + dur + 0.05);
+    });
+  }
+
+  // G10. 多普勒目标掠过 (#13 频率微俯冲：适合对向船只交会/横驶区掠过)
+  playG10_DopplerPass() {
+    this.init();
+    const now = this.ctx.currentTime;
+    const dur = 0.72;
+    this.injectChassisMass(now + 0.15, 0.85);
+    const osc = this.ctx.createOscillator();
+    const pan = this.ctx.createStereoPanner();
+    const g = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(this.f(1120), now);
+    osc.frequency.exponentialRampToValueAtTime(this.f(760), now + dur);
+    pan.pan.setValueAtTime(0.75, now);
+    pan.pan.linearRampToValueAtTime(-0.75, now + dur);
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.linearRampToValueAtTime(0.17, now + dur * 0.35);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+    osc.connect(g);
+    g.connect(pan);
+    pan.connect(this.dryBus);
+    osc.start(now);
+    osc.stop(now + dur + 0.03);
+  }
+
+  // G11. 声学信标定时滴答 (#17 短促版：适合船闸等待倒计时/秒表刻度)
+  playG11_SonarBeaconTick() {
+    this.init();
+    const now = this.ctx.currentTime;
+    this.injectChassisMass(now, 0.65);
+    const osc = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    osc.type = 'sine';
+    const base = this.f(987.77);
+    osc.frequency.setValueAtTime(base, now);
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.linearRampToValueAtTime(0.15, now + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+    osc.connect(g);
+    g.connect(this.dryBus);
+    osc.start(now);
+    osc.stop(now + 0.2);
+  }
+
+  // G12. 虚实空间融合锁定 (#13 + #17 宽声场和弦雷达：适合“真实环境+虚拟交通”同框)
+  playG12_FusionSpacePing() {
+    this.init();
+    const now = this.ctx.currentTime;
+    const dur = 1.1;
+    this.injectChassisMass(now, 1.0);
+    [587.33, 880, 1174.66].forEach((rawF, i) => {
+      const t0 = now + i * 0.025;
+      const osc = this.ctx.createOscillator();
+      const pan = this.ctx.createStereoPanner();
+      const g = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(this.f(rawF), t0);
+      pan.pan.setValueAtTime((i - 1) * 0.55, t0);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.linearRampToValueAtTime(0.12 / (1 + i * 0.25), t0 + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      osc.connect(g);
+      g.connect(pan);
+      pan.connect(this.dryBus);
+      osc.start(t0);
+      osc.stop(t0 + dur + 0.05);
+    });
+  }
+
+  // G13. 沉稳低频双音核验 (#12 降调纯四度版：更厚重的阶段切换提示)
+  playG13_DeepVerified() {
+    this.init();
+    const now = this.ctx.currentTime;
+    this.injectChassisMass(now, 1.0);
+    [523.25, 698.46].forEach((rawF, idx) => {
+      const t0 = now + idx * 0.075;
+      const dur = 0.42;
+      const osc = this.ctx.createOscillator();
+      const lp = this.ctx.createBiquadFilter();
+      const g = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(this.f(rawF), t0);
+      lp.type = 'lowpass';
+      lp.frequency.setValueAtTime(this.f(1800), t0);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.linearRampToValueAtTime(0.17, t0 + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      osc.connect(lp);
+      lp.connect(g);
+      g.connect(this.dryBus);
+      osc.start(t0);
+      osc.stop(t0 + dur + 0.02);
+    });
+  }
+
+  // G14. 三段赛程递进确认 (#12 三音阶版：适合“01域控 -> 02实船 -> 03竞评”三阶段点亮)
+  playG14_TriStageStep() {
+    this.init();
+    const now = this.ctx.currentTime;
+    this.injectChassisMass(now, 0.9);
+    [440, 554.37, 659.25].forEach((rawF, idx) => {
+      const t0 = now + idx * 0.068;
+      const dur = idx === 2 ? 0.45 : 0.14;
+      const osc = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(this.f(rawF), t0);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.linearRampToValueAtTime(0.15, t0 + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      osc.connect(g);
+      g.connect(this.dryBus);
+      osc.start(t0);
+      osc.stop(t0 + dur + 0.02);
+    });
+  }
+
+  // G15. 船闸闸门开启就绪 (#12 + 机械底座：适合人字闸门完全开启通行)
+  playG15_LockGateReady() {
+    this.init();
+    const now = this.ctx.currentTime;
+    this.injectChassisMass(now, 1.15);
+    [392.0, 587.33].forEach((rawF, idx) => {
+      const t0 = now + idx * 0.095;
+      const dur = 0.52;
+      const osc = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(this.f(rawF), t0);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.linearRampToValueAtTime(0.19, t0 + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      osc.connect(g);
+      g.connect(this.dryBus);
+      osc.start(t0);
+      osc.stop(t0 + dur + 0.02);
+    });
+  }
+
+  // G16. 航速超限低频警示 (#24 短促双脉冲版：适合 1.5m/s 限速阈值红线提示)
+  playG16_SpeedThresholdWarn() {
+    this.init();
+    const now = this.ctx.currentTime;
+    [0, 0.16].forEach((off) => {
+      const t0 = now + off;
+      const dur = 0.13;
+      [82.41, 123.47].forEach((rawF, idx) => {
+        const osc = this.ctx.createOscillator();
+        const lp = this.ctx.createBiquadFilter();
+        const g = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(this.f(rawF), t0);
+        lp.type = 'lowpass';
+        lp.frequency.setValueAtTime(this.f(680), t0);
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.linearRampToValueAtTime(idx === 0 ? 0.22 : 0.13, t0 + 0.012);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+        osc.connect(lp);
+        lp.connect(g);
+        g.connect(this.dryBus);
+        osc.start(t0);
+        osc.stop(t0 + dur + 0.02);
+      });
+    });
+  }
+
+  // G17. 可航边界越界零分否决 (#24 下行压迫重击：适合“驶出可航区：0分”判罚)
+  playG17_VetoLowStinger() {
+    this.init();
+    const now = this.ctx.currentTime;
+    const dur = 0.95;
+    [73.42, 65.41].forEach((rawF, idx) => {
+      const t0 = now + idx * 0.14;
+      const osc = this.ctx.createOscillator();
+      const lp = this.ctx.createBiquadFilter();
+      const g = this.ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(this.f(rawF), t0);
+      osc.frequency.exponentialRampToValueAtTime(this.f(rawF * 0.88), t0 + dur * 0.7);
+      lp.type = 'lowpass';
+      lp.frequency.setValueAtTime(this.f(720), t0);
+      lp.frequency.exponentialRampToValueAtTime(this.f(180), t0 + dur * 0.75);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.linearRampToValueAtTime(0.24, t0 + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur * 0.8);
+      osc.connect(lp);
+      lp.connect(g);
+      g.connect(this.dryBus);
+      osc.start(t0);
+      osc.stop(t0 + dur);
+    });
+  }
+
+  // G18. 战略简报终章定格 (#24 + #12 复合：厚重铜管底座 + 清亮核验尾音，适合 98s 结尾主标题)
+  playG18_FinaleLock() {
+    this.init();
+    const now = this.ctx.currentTime;
+    this.play24_ThreatStinger();
+    [660, 990].forEach((rawF, idx) => {
+      const t0 = now + 0.06 + idx * 0.07;
+      const dur = 0.65;
+      const osc = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(this.f(rawF), t0);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.linearRampToValueAtTime(0.14, t0 + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      osc.connect(g);
+      g.connect(this.dryBus);
+      osc.start(t0);
+      osc.stop(t0 + dur + 0.03);
+    });
+  }
+}
+
+const dsp = new SciFiDspEngine();
+
+// ============================================================================
+// 2. 泛化音色目录 (18 种衍生音色 + 5 种原始母版参考)
+// ============================================================================
+const CATEGORIES = [
+  {
+    num: 'GROUP A',
+    title: '基于 #11 [卫星遥测数据包] 的泛化衍生 (6 种)',
+    sub: 'TELEMETRY & DATA // 纯正 FSK 频率键控 + 金属底座阻尼，适合数据同步、参数展开、归档',
+    items: [
+      { id: 'G01', name: '窄带星地短报文', badge: '基于 #11 · 短促版', desc: '精简为 6 比特短突发包，干净利落，适合小数据标签、字幕角标刷新。', dur: '0.13s', play: () => dsp.playG01_ShortTelemetry() },
+      { id: 'G02', name: '硬件域控握手报文', badge: '基于 #11 · 双帧握手', desc: '一问一答双帧 FSK 脉冲 + 双重金属底座，适合 AGX Orin 连线与 MQTT 通信。', dur: '0.26s', play: () => dsp.playG02_ControllerHandshake() },
+      { id: 'G03', name: '坐标矩阵逐行写入', badge: '基于 #11 · 阶梯上行', desc: '6 级纯正弦阶梯上行遥测，适合 6 类场景卡片、规则评分表逐行展开。', dur: '0.25s', play: () => dsp.playG03_MatrixTelemetry() },
+      { id: 'G04', name: '水声调制解调器回传', badge: '基于 #11 + #17 · 水声波', desc: '把 FSK 报文送入水声低通反馈延迟链，模拟真实无人船水下声学回传。', dur: '0.45s', play: () => dsp.playG04_AcousticModem() },
+      { id: 'G05', name: '航行日志封包归档', badge: '基于 #11 · 下行收束', desc: '5 级下行频率收束 + 末端重器落锁，适合“停止/关闭场景、上传航行记录”。', dur: '0.24s', play: () => dsp.playG05_PacketArchive() },
+      { id: 'G06', name: '十二任务算术平均汇总', badge: '基于 #11 + #12 · 聚合音', desc: '多任务数据流汇入并定格在清亮长音，适合 78s “十二任务算术平均公式”生成。', dur: '0.56s', play: () => dsp.playG06_TaskAggregation() }
+    ]
+  },
+  {
+    num: 'GROUP B',
+    title: '基于 #13 [相控阵雷达] & #17 [深空声呐] 的泛化衍生 (6 种)',
+    sub: 'RADAR & BATHYMETRY // 舰载探测脉冲、水下地形回波、多普勒掠过，适合水面与虚实场景',
+    items: [
+      { id: 'G07', name: '舰载相控阵近距扫描', badge: '基于 #13 · 双脉冲', desc: '紧致双音雷达探测脉冲，适合画面中“虚拟交通船只 T01–T03”检出。', dur: '0.45s', play: () => dsp.playG07_CloseArrayPing() },
+      { id: 'G08', name: '虚实边界测距回波', badge: '基于 #13 + #17 · 长尾反射', desc: '中低频探测波配 0.11s 金属波导长尾回声，适合“可航区域边界线”高亮。', dur: '1.05s', play: () => dsp.playG08_BoundaryEcho() },
+      { id: 'G09', name: '深水声呐双频探测', badge: '基于 #17 · 八度厚重版', desc: '在 #17 基础上叠加低八度基频，更具大型船舶吃水与水下地形测绘的厚重感。', dur: '1.40s', play: () => dsp.playG09_DualBathymetry() },
+      { id: 'G10', name: '多普勒目标掠过', badge: '基于 #13 · 立体声掠过', desc: '带真实多普勒频移与右→左声像移动，适合“横驶区对向船只交会/桥区通过”。', dur: '0.75s', play: () => dsp.playG10_DopplerPass() },
+      { id: 'G11', name: '声学信标定时滴答', badge: '基于 #17 · 短促信标', desc: '收紧尾音的纯净水声信标脉冲，适合“船闸等待计时、限速时间窗口”节点。', dur: '0.20s', play: () => dsp.playG11_SonarBeaconTick() },
+      { id: 'G12', name: '虚实空间融合锁定', badge: '基于 #13 + #17 · 宽声场', desc: '三音宽声场雷达与声呐和弦共鸣，适合 15s “虚拟船模与真实船模同轮廓交接”。', dur: '1.15s', play: () => dsp.playG12_FusionSpacePing() }
+    ]
+  },
+  {
+    num: 'GROUP C',
+    title: '基于 #12 [虹膜验证] & #24 [威胁警报] 的泛化衍生 (6 种)',
+    sub: 'VERIFICATION & HEAVY ALERTS // 沉稳确认双音与暗黑低频重器，适合阶段推进、红线规则与结尾',
+    items: [
+      { id: 'G13', name: '沉稳低频双音核验', badge: '基于 #12 · 纯四度低频', desc: '去掉前奏机械音，保留纯四度低频三角波双音，极度克制，适合一般步骤确认。', dur: '0.50s', play: () => dsp.playG13_DeepVerified() },
+      { id: 'G14', name: '三段赛程递进确认', badge: '基于 #12 · 三音阶版', desc: '三段递进确认音，精准匹配“01 域控在环 → 02 实船在环 → 03 船模竞评”三阶段。', dur: '0.58s', play: () => dsp.playG14_TriStageStep() },
+      { id: 'G15', name: '船闸闸门开启就绪', badge: '基于 #12 · 重型底座', desc: '厚重次低频撞击 + 纯五度放行信号，适合 31s “人字闸门开启 / 船模重新启动”。', dur: '0.62s', play: () => dsp.playG15_LockGateReady() },
+      { id: 'G16', name: '航速超限低频警示', badge: '基于 #24 · 短促双警示', desc: '收短为双段低通铜管警示音，不刺耳，适合 68s “超过 1.5 m/s 每记 1 次扣 1 分”。', dur: '0.32s', play: () => dsp.playG16_SpeedThresholdWarn() },
+      { id: 'G17', name: '可航边界越界零分否决', badge: '基于 #24 · 下行压迫', desc: '两段下行压迫低频重击，适合 63s “驶出可航区：0 分 / 碰撞直接零分”判罚。', dur: '0.95s', play: () => dsp.playG17_VetoLowStinger() },
+      { id: 'G18', name: '战略简报终章定格', badge: '基于 #24 + #12 · 终章', desc: '暗黑低频重击底座叠加清亮核验双音，适合 98s 结尾“第二届虚实融合测试赛”主标题。', dur: '0.88s', play: () => dsp.playG18_FinaleLock() }
+    ]
+  },
+  {
+    num: 'BASE 05',
+    title: '原始中选 5 款母版音色 (对照参考)',
+    sub: 'ORIGINAL SELECTED // 你上一轮选出的 5 个基准音色，方便随时 A/B 对比',
+    items: [
+      { id: '11', name: '卫星遥测数据包 (母版)', badge: '原始 #11', desc: '双频频移键控调制，还原真实星地遥测报文传输。', dur: '0.23s', play: () => dsp.play11_SatelliteTelemetry() },
+      { id: '12', name: '生物特征/虹膜验证通过 (母版)', badge: '原始 #12', desc: '机械快门触发后接沉稳纯五度双音上行。', dur: '0.45s', play: () => dsp.play12_BiometricVerified() },
+      { id: '13', name: '相控阵雷达脉冲 (母版)', badge: '原始 #13', desc: '带微弱多普勒频移的探测脉冲 + 金属波导梳状延迟回声。', dur: '0.65s', play: () => dsp.play13_PhasedRadar() },
+      { id: '17', name: '深空声呐/海底地形测绘 (母版)', badge: '原始 #17', desc: '正弦基频配低通反馈延迟链，营造水面/深海测绘空间感。', dur: '1.30s', play: () => dsp.play17_DeepSonar() },
+      { id: '24', name: '威胁等级提升警报 (母版)', badge: '原始 #24', desc: '暗黑电影感低音铜管式滤波重击。', dur: '0.85s', play: () => dsp.play24_ThreatStinger() }
+    ]
+  }
+];
+
+// ============================================================================
+// 3. 动态构建 UI 卡片、评论输入框与导出报告逻辑
+// ============================================================================
+const root = $('lab-root');
+const cardElements = new Map();
+const commentInputs = new Map();
+const allItems = [];
+
+CATEGORIES.forEach(cat => {
+  const sec = document.createElement('section');
+  sec.className = 'category-section';
+
+  sec.innerHTML = `
+    <div class="category-header">
+      <div class="category-title">
+        <span class="category-num">${cat.num}</span>
+        <span>${cat.title}</span>
+      </div>
+      <div class="category-sub">${cat.sub}</div>
+    </div>
+    <div class="cards-grid"></div>
+  `;
+
+  const grid = sec.querySelector('.cards-grid');
+
+  cat.items.forEach(item => {
+    allItems.push(item);
+    const card = document.createElement('div');
+    card.className = 'sound-card';
+    card.dataset.id = item.id;
+    card.innerHTML = `
+      <div>
+        <div class="card-top">
+          <span class="card-id">SFX #${item.id}</span>
+          <span class="dsp-badge">${item.badge}</span>
+        </div>
+        <div class="card-name">${item.name}</div>
+        <div class="card-desc">${item.desc}</div>
+      </div>
+      <textarea class="comment-box" rows="2" placeholder="输入对 #${item.id} 的意见（例如：音调再低一点、适合卡片展开、太轻或不错...）"></textarea>
+      <div class="card-footer">
+        <span>DURATION // ${item.dur}</span>
+        <span class="play-pill">▶ 试听</span>
+      </div>
+    `;
+
+    const textarea = card.querySelector('.comment-box');
+    // 防止在文本框打字/点击时误触发卡片发声
+    textarea.addEventListener('click', e => e.stopPropagation());
+    textarea.addEventListener('keydown', e => e.stopPropagation());
+    textarea.addEventListener('input', () => {
+      if (textarea.value.trim()) {
+        card.classList.add('has-note');
+      } else {
+        card.classList.remove('has-note');
+      }
+    });
+
+    card.addEventListener('click', () => triggerItem(item));
+    grid.appendChild(card);
+    cardElements.set(item.id, card);
+    commentInputs.set(item.id, textarea);
+  });
+
+  root.appendChild(sec);
+});
+
+let activeHighlightTimer = null;
+function triggerItem(item) {
+  item.play();
+
+  cardElements.forEach(el => el.classList.remove('active'));
+  const el = cardElements.get(item.id);
+  if (el) {
+    el.classList.add('active');
+    clearTimeout(activeHighlightTimer);
+    activeHighlightTimer = setTimeout(() => el.classList.remove('active'), 850);
+  }
+
+  $('now-playing').textContent = `ACTIVE // [SFX #${item.id}] ${item.name} (${item.badge})`;
+}
+
+// 顶栏滑块控制
+$('weight-ctrl').addEventListener('input', e => {
+  const w = parseFloat(e.target.value);
+  $('weight-val').textContent = `${Math.round(w * 100)}%`;
+  dsp.setWeight(w);
+});
+
+$('pitch-ctrl').addEventListener('input', e => {
+  const p = parseInt(e.target.value, 10);
+  $('pitch-val').textContent = `${p > 0 ? '+' : ''}${p} st`;
+  dsp.setPitch(p);
+});
+
+$('master-vol').addEventListener('input', e => {
+  const v = parseFloat(e.target.value);
+  $('master-val').textContent = `${Math.round(v * 100)}%`;
+  dsp.setVolume(v);
+});
+
+$('reverb-send').addEventListener('input', e => {
+  const r = parseFloat(e.target.value);
+  $('reverb-val').textContent = `${Math.round((r / 0.8) * 100)}%`;
+  dsp.setReverb(r);
+});
+
+// 一键复制全部评论报告
+$('btn-copy-report').addEventListener('click', () => {
+  const lines = [];
+  lines.push('【SceneBrief 科技/战术音色试听反馈报告】');
+  lines.push(`当前全局参数：工业重量 ${Math.round(dsp.weight * 100)}% | 音调偏置 ${dsp.pitchSemis > 0 ? '+' : ''}${dsp.pitchSemis} st | 混响 ${Math.round((dsp.rev / 0.8) * 100)}%`);
+
+  const gNote = $('global-note').value.trim();
+  if (gNote) {
+    lines.push(`整体总评：${gNote}`);
+  }
+  lines.push('----------------------------------------');
+
+  let count = 0;
+  allItems.forEach(item => {
+    const val = commentInputs.get(item.id)?.value.trim();
+    if (val) {
+      count++;
+      lines.push(`- SFX #${item.id} [${item.name}]: ${val}`);
+    }
+  });
+
+  if (count === 0 && !gNote) {
+    lines.push('（尚未填写具体单条备注，请直接在对应卡片输入框内打字后再复制）');
+  }
+
+  const reportText = lines.join('\n');
+
+  // 使用兼容 iFrame 的剪贴板复制方案
+  const tempTa = document.createElement('textarea');
+  tempTa.value = reportText;
+  tempTa.style.position = 'fixed';
+  tempTa.style.left = '-9999px';
+  document.body.appendChild(tempTa);
+  tempTa.select();
+  document.execCommand('copy');
+  document.body.removeChild(tempTa);
+
+  const toast = $('toast');
+  toast.textContent = count > 0
+    ? `✓ 已复制 ${count} 条音色评论报告，直接 Ctrl+V 发给我就行！`
+    : '✓ 已复制当前参数与总评（你也可以在卡片框里写单条意见）';
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2800);
+});
+
+// 连续试听全部 24 种音色
+let auditionTimer = null;
+let auditionIdx = 0;
+
+function stopAudition() {
+  clearTimeout(auditionTimer);
+  auditionTimer = null;
+  $('btn-audition').style.display = 'inline-flex';
+  $('btn-stop').style.display = 'none';
+}
+
+function stepAudition() {
+  if (auditionIdx >= allItems.length) {
+    stopAudition();
+    $('now-playing').textContent = 'COMPLETE // 全部 24 种科技音色巡检完毕';
+    return;
+  }
+  const item = allItems[auditionIdx];
+  triggerItem(item);
+  const el = cardElements.get(item.id);
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+  auditionIdx++;
+  auditionTimer = setTimeout(stepAudition, 1150);
+}
+
+$('btn-audition').addEventListener('click', () => {
+  dsp.init();
+  auditionIdx = 0;
+  $('btn-audition').style.display = 'none';
+  $('btn-stop').style.display = 'inline-flex';
+  stepAudition();
+});
+
+$('btn-stop').addEventListener('click', () => {
+  stopAudition();
+  $('now-playing').textContent = 'STOPPED // 已停止连续试听';
+});
+
+// ============================================================================
+// 4. 实时示波器 + 频谱双模可视化画布
+// ============================================================================
+const scope = $('scope');
+const sctx = scope.getContext('2d');
+
+function resizeScope() {
+  const rect = scope.parentElement.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  scope.width = Math.round(rect.width * dpr);
+  scope.height = Math.round(rect.height * dpr);
+}
+window.addEventListener('resize', resizeScope);
+resizeScope();
+
+function drawVisualizer() {
+  const w = scope.width;
+  const h = scope.height;
+  sctx.clearRect(0, 0, w, h);
+
+  sctx.strokeStyle = 'rgba(92, 200, 255, 0.14)';
+  sctx.lineWidth = 1;
+  sctx.beginPath();
+  sctx.moveTo(0, h * 0.5);
+  sctx.lineTo(w, h * 0.5);
+  sctx.stroke();
+
+  if (dsp.analyser) {
+    const bufLen = dsp.analyser.frequencyBinCount;
+    const freqData = new Uint8Array(bufLen);
+    const timeData = new Uint8Array(bufLen);
+    dsp.analyser.getByteFrequencyData(freqData);
+    dsp.analyser.getByteTimeDomainData(timeData);
+
+    const bars = 96;
+    const step = Math.floor((bufLen * 0.65) / bars);
+    const barW = w / bars;
+    for (let i = 0; i < bars; i++) {
+      const val = freqData[i * step] / 255;
+      const bh = val * (h * 0.72);
+      sctx.fillStyle = `rgba(229, 169, 92, ${0.12 + val * 0.35})`;
+      sctx.fillRect(i * barW + 1, h - bh, Math.max(1, barW - 2), bh);
+    }
+
+    sctx.strokeStyle = '#5cc8ff';
+    sctx.lineWidth = 1.8;
+    sctx.beginPath();
+    const sliceW = w / bufLen;
+    let x = 0;
+    for (let i = 0; i < bufLen; i++) {
+      const v = timeData[i] / 128.0;
+      const y = (v * h) / 2;
+      if (i === 0) sctx.moveTo(x, y);
+      else sctx.lineTo(x, y);
+      x += sliceW;
+    }
+    sctx.stroke();
+  }
+
+  requestAnimationFrame(drawVisualizer);
+}
+requestAnimationFrame(drawVisualizer);
+</script>
+</body>
+</html>
