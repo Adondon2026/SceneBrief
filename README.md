@@ -23,3 +23,9 @@
 
 
 新案例通过 Motion Lab 用户验收后，直接继承该源码，以约20秒为一批累计扩展；每批实际渲染、修正、旧段视觉回归及内部验收。Swift 当前认可基线见 [18秒 Motion Lab 02](examples/swift-racing/motion-lab-02.html)，进度见 [审查记录](examples/swift-racing/review.md)。新作不内置旁白字幕，仅提供独立 SRT。
+
+## 导演脚本与公开仓库边界
+
+新案例先完成完整导演脚本并获用户明确批准，再做视觉基准帧、核心动态实验、Motion Lab 与约20秒累计开发。详见 [DIRECTING.md](DIRECTING.md)、[全片导演脚本模板](templates/DIRECTOR-SCRIPT.md)、[逐镜头设计模板](templates/SHOT-DESIGN.md)；脚本和实际画面均须独立验收。
+
+本仓库公开。案例原始资料、具体脚本、成片、HTML、SRT、音频、模型及审查记录默认私有交付，不自动上传。仅在明确授权并核对敏感性和许可后提交适合公开的文件。读取和遵循规范不代表授权发布成果。
